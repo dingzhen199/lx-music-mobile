@@ -85,7 +85,8 @@ beforeEach(async() => {
   mocks.addQueue.mockImplementation(items => mocks.queue.push(...items))
   mocks.getListMusics.mockResolvedValue([])
   mocks.platformRecall.mockResolvedValue(recallOk())
-  vi.stubGlobal('global', { lx: { isProd: true }, app_event: new EventEmitter() })
+  vi.stubGlobal('lx', { isProd: true })
+  vi.stubGlobal('app_event', new EventEmitter())
   session = await import('./session')
 })
 

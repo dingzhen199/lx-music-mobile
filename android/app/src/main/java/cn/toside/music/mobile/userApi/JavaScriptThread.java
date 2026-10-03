@@ -65,6 +65,6 @@ public class JavaScriptThread extends HandlerThread {
   }
 
   public void stopThread() {
-    quit();
+    quitSafely();
   }
 }

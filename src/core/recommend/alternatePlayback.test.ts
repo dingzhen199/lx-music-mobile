@@ -9,10 +9,12 @@ vi.mock('@/core/recommend/adapters/playerAction', () => ({ addTempPlayList: vi.f
 vi.mock('@/core/recommend/adapters/playerState', () => ({ tempPlayList: [] }))
 vi.mock('@/utils/listManage', () => ({ getListMusics: async() => [] }))
 vi.mock('@/core/recommend/adapters/listState', () => ({ loveList: { id: 'love' } }))
-vi.mock('@/store', () => ({ qualityList: { value: { wy: ['128k'], tx: ['128k'] } }, userApi: { apis: {}, qualityLists: {} } }))
-vi.mock('@/core/recommend/adapters/setting', () => ({ appSetting: { 'common.apiSource': 'primary', 'common.apiSourceBackups': [], 'player.playQuality': '128k' } }))
+vi.mock('@/store/userApi', () => ({ state: { apis: {}, qualityLists: {} } }))
+vi.mock('react-native-background-timer', () => ({ default: { setTimeout, clearTimeout } }))
+vi.mock('@/store/setting/state', () => ({ default: { setting: { 'common.apiSource': 'primary', 'common.apiSourceBackups': [], 'player.playQuality': '128k' } } }))
 vi.mock('@/utils', () => ({ toNewMusicInfo: (x: unknown) => x, toOldMusicInfo: (x: unknown) => x, langS2T: vi.fn() }))
 vi.mock('@/utils/musicSdk', () => ({
+  findMusic: mocks.findMusic,
   default: {
     wy: { getMusicUrl: () => ({ promise: Promise.reject(new Error('wy unavailable')) }) },
     tx: { getMusicUrl: mocks.txUrl },
@@ -20,7 +22,7 @@ vi.mock('@/utils/musicSdk', () => ({
   },
 }))
 vi.mock('@/utils/musicSdk/api-source', () => ({ apis: vi.fn() }))
-vi.mock('@/utils/ipc', () => ({ getMusicUrl: async() => null, getMusicUrlInfo: async() => null, getPlayerLyric: vi.fn() }))
+vi.mock('@/utils/data', () => ({ getMusicUrl: async() => null, getMusicUrlInfo: async() => null, getPlayerLyric: vi.fn() }))
 
 const song = (source: 'wy' | 'tx'): LX.Music.MusicInfoOnline => {
   const common = { name: 'Song', singer: 'Artist', interval: '03:00', meta: { songId: '1', albumName: '', qualitys: [], _qualitys: { '128k': { size: null } } } }
@@ -31,7 +33,8 @@ const song = (source: 'wy' | 'tx'): LX.Music.MusicInfoOnline => {
 
 beforeEach(() => {
   vi.clearAllMocks()
-  vi.stubGlobal('global', { lx: { apiInitPromise: [Promise.resolve(true)] }, i18n: { t: (x: string) => x } })
+  vi.stubGlobal('lx', { qualityList: { wy: ['128k'], tx: ['128k'] }, apiInitPromise: [Promise.resolve(true)] })
+  vi.stubGlobal('i18n', { t: (x: string) => x })
 })
 afterEach(() => { vi.unstubAllGlobals() })
 

@@ -7,6 +7,7 @@ import { createStyle } from '@/utils/tools'
 import { useTheme } from '@/store/theme/hook'
 import { useI18n } from '@/lang'
 // import SourceSelector, { type SourceSelectorProps, type SourceSelectorType } from '../SourceSelector'
+import { parseSongListUrl, resolveSongListInput } from '@/utils/songListUrl'
 import { type Source } from '@/store/songlist/state'
 
 interface IdInputType {
@@ -14,7 +15,7 @@ interface IdInputType {
   getText: () => string
   focus: () => void
 }
-const IdInput = forwardRef<IdInputType, {}>((props, ref) => {
+const IdInput = forwardRef<IdInputType, { onTextChange: (text: string) => void }>(({ onTextChange }, ref) => {
   const theme = useTheme()
   const t = useI18n()
   const [text, setText] = useState('')
@@ -37,7 +38,7 @@ const IdInput = forwardRef<IdInputType, {}>((props, ref) => {
       ref={inputRef}
       placeholder={t('songlist_open_input_placeholder')}
       value={text}
-      onChangeText={setText}
+      onChangeText={value => { setText(value); onTextChange(value) }}
       style={{ ...styles.input, backgroundColor: theme['c-primary-input-background'] }}
     />
   )
@@ -45,7 +46,7 @@ const IdInput = forwardRef<IdInputType, {}>((props, ref) => {
 
 
 export interface ModalProps {
-  onOpenId: (id: string) => void
+  onOpenId: (id: string, source: Source) => void
   // onSourceChange: SourceSelectorProps['onSourceChange']
 }
 export interface ModalType {
@@ -57,10 +58,12 @@ export default forwardRef<ModalType, ModalProps>(({ onOpenId }, ref) => {
   // const sourceSelectorRef = useRef<SourceSelectorType>(null)
   const inputRef = useRef<IdInputType>(null)
   const [visible, setVisible] = useState(false)
+  const [source, setSource] = useState<Source>('kw')
   const theme = useTheme()
   const t = useI18n()
 
   const handleShow = (source: Source) => {
+    setSource(source)
     alertRef.current?.setVisible(true)
     requestAnimationFrame(() => {
       inputRef.current?.setText('')
@@ -87,7 +90,8 @@ export default forwardRef<ModalType, ModalProps>(({ onOpenId }, ref) => {
     if (!id.length) return
     if (id.length > 500) id = id.substring(0, 500)
     alertRef.current?.setVisible(false)
-    onOpenId(id)
+    const parsed = resolveSongListInput(id, source)
+    onOpenId(parsed.id, parsed.source)
   }
 
   return (
@@ -99,8 +103,12 @@ export default forwardRef<ModalType, ModalProps>(({ onOpenId }, ref) => {
           <View style={styles.content}>
             <View style={styles.col}>
               {/* <SourceSelector style={{ ...styles.selector, backgroundColor: theme['c-primary-input-background'] }} ref={sourceSelectorRef} onSourceChange={onSourceChange} /> */}
-              <IdInput ref={inputRef} />
+              <IdInput ref={inputRef} onTextChange={text => {
+                const parsed = parseSongListUrl(text)
+                if (parsed) setSource(parsed.source)
+              }} />
             </View>
+            <Text size={13}>{t(`source_real_${source}`)}</Text>
             <Text style={styles.inputTipText} size={13} color={theme['c-600']}>{t('songlist_open_input_tip')}</Text>
           </View>
         </ConfirmAlert>

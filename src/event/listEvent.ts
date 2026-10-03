@@ -154,8 +154,10 @@ export class ListEvent extends Event {
    * @param isRemote 是否属于远程操作
    */
   async list_music_overwrite(listId: string, musicInfos: LX.Music.MusicInfo[], isRemote: boolean = false) {
+    // Persist before publishing: a failed online update must keep the local list intact.
+    await saveListMusics([{ id: listId, musics: musicInfos }])
     const changedIds = await listMusicOverwrite(listId, musicInfos)
-    await checkUpdateList(changedIds)
+    global.app_event.myListMusicUpdate(changedIds)
     this.emit('list_music_overwrite', listId, musicInfos, isRemote)
   }
 

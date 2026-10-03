@@ -56,7 +56,8 @@ beforeEach(async() => {
   mocks.progress.maxPlayTime = 0
   events = new EventEmitter()
   scope = effectScope()
-  vi.stubGlobal('global', { lx: { isProd: true }, app_event: events })
+  vi.stubGlobal('lx', { isProd: true })
+  vi.stubGlobal('app_event', events)
   rate = (await import('@/core/recommend/adapters/playbackRate')).playbackRate
   rate.value = 1
   profile = await import('./profile')

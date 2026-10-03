@@ -132,7 +132,7 @@ declare class EventType extends StateEvent {
   off<K extends keyof EventMethods>(event: K, listener: EventMethods[K]): any
 }
 
-export type StateEventTypes = Omit<EventType, keyof Omit<Event, 'on' | 'off'>>
+export type StateEventTypes = Omit<EventType, keyof Omit<Event, 'on' | 'off' | 'onSync' | 'offSync'>>
 export const createStateEventHub = (): StateEventTypes => {
   return new StateEvent()
 }

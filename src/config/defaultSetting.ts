@@ -3,6 +3,7 @@ const defaultSetting: LX.AppSetting = {
   'common.isAutoTheme': false,
   'common.langId': null,
   'common.apiSource': '',
+  'common.apiSourceBackups': [],
   'common.sourceNameType': 'alias',
   'common.shareType': 'system',
   'common.isAgreePact': false,
@@ -69,6 +70,18 @@ const defaultSetting: LX.AppSetting = {
   'list.addMusicLocationType': 'top',
 
   'download.fileName': '歌名 - 歌手',
+
+  'ai.enable': false,
+  'ai.audioAnalysisEnabled': false,
+  'ai.provider': 'openai-compatible',
+  'ai.baseUrl': '',
+  'ai.apiKey': '',
+  'ai.model': '',
+  'ai.maxConcurrentRequests': 3,
+  'recommend.engine': 'platform',
+  'recommend.radius': 35,
+  'recommend.autoRefill': true,
+  'recommend.radio': false,
 
   'sync.enable': false,
 

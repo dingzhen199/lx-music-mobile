@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { explorePlatformOnce } from './platformEngine'
 import type { PlatformRecallAnchor, PlatformRecallResult } from './platformRecall'
-import { addDislikeInfo, clearDislikeInfo } from '@/store/dislikeList/action'
+import { addDislikeInfo, clearDislikeInfo } from './testRules'
 
 const mocks = vi.hoisted(() => ({
   recall: vi.fn(),

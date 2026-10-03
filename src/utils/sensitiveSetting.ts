@@ -1,4 +1,4 @@
-import { toRaw } from '@/config/utils/vueTools'
+import { toRaw } from '@vue/runtime-core'
 
 /**
  * 备份导出前的敏感字段剔除：AI API Key 仅保存在本机，不随 .lxmc 备份文件导出与分享。

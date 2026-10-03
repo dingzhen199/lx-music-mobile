@@ -54,10 +54,10 @@ export default async(setting: LX.AppSetting) => {
   }
 
 
-  global.app_event.on('play', setPlayStatus)
-  global.app_event.on('pause', setPauseStatus)
-  global.app_event.on('error', setPauseStatus)
-  global.app_event.on('stop', setStopStatus)
+  global.app_event.onSync('play', setPlayStatus)
+  global.app_event.onSync('pause', setPauseStatus)
+  global.app_event.onSync('error', setPauseStatus)
+  global.app_event.onSync('stop', setStopStatus)
   global.app_event.on('playerEnded', handleEnded)
   global.app_event.on('picUpdated', updatePic)
   global.state_event.on('configUpdated', handleConfigUpdated)

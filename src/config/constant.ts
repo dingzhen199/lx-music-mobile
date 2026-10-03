@@ -104,6 +104,7 @@ export const NAV_MENUS = [
   { id: 'nav_top', icon: 'leaderboard' },
   { id: 'nav_love', icon: 'love' },
   // { id: 'download', icon: 'download-2' },
+  { id: 'nav_explore', icon: 'album' },
   { id: 'nav_setting', icon: 'setting' },
 ] as const
 

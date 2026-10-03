@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { toNewMusicInfo } from '@common/utils/tools'
-import { addDislikeInfo, clearDislikeInfo } from '@/store/dislikeList/action'
+import { toNewMusicInfo } from '@/utils/musicInfo'
+import { addDislikeInfo, clearDislikeInfo } from './testRules'
 import { exploreOnce, type ExploreOptions } from './engine'
 import { normalizeAnalysis } from './prompts'
 
@@ -13,15 +13,15 @@ const mocks = vi.hoisted(() => ({
   lists: [] as Array<{ id: string }>,
 }))
 // Exercise real conversion, recall, grouping, ranking and submission in both modes.
-vi.mock('@/utils', async() => import('@common/utils/tools'))
-vi.mock('@/utils/musicSdk', () => ({ default: { searchMusic: mocks.search } }))
+vi.mock('@/utils', async() => import('@/utils/musicInfo'))
+vi.mock('@/utils/musicSdk', () => ({ searchMusic: mocks.search }))
 vi.mock('@/core/recommend/adapters/playerAction', () => ({ addTempPlayList: mocks.addQueue }))
 vi.mock('@/core/recommend/adapters/playerState', () => ({ tempPlayList: mocks.queue, playedList: [], playMusicInfo: { musicInfo: null } }))
 vi.mock('@/utils/listManage', () => ({ getListMusics: mocks.getList }))
 vi.mock('@/core/recommend/adapters/listState', () => ({ loveList: { id: 'love' }, userLists: mocks.lists }))
 vi.mock('@/core/recommend/adapters/playProgress', () => ({ playProgress: { nowPlayTimeStr: '0:00' } }))
 vi.mock('@/core/recommend/adapters/setting', () => ({ appSetting: { 'ai.maxConcurrentRequests': 3 } }))
-vi.mock('@common/rendererIpc', () => ({ rendererInvoke: mocks.invoke }))
+vi.mock('./adapters/llmTransport', () => ({ llmTransport: mocks.invoke }))
 vi.mock('./feature', () => ({ summarizeBuckets: () => ({ valid: false, text: '' }) }))
 
 const raw = (source: string, songmid: string, singer: string, name = 'S1') => ({
@@ -42,7 +42,7 @@ beforeEach(() => {
   mocks.lists.splice(0)
   mocks.getList.mockResolvedValue([])
   mocks.search.mockResolvedValue([{ source: 'all', list: [preferred, alias, safe] }])
-  mocks.invoke.mockImplementation(async(_event, params) => {
+  mocks.invoke.mockImplementation(async(params) => {
     const input = params.messages[1].content.split('下面是音乐平台返回的真实候选：\n')[1]
     const candidates = JSON.parse(input) as unknown[]
     const ranking = candidates.map((_, candidateId) => ({

@@ -1,3 +1,4 @@
+import { readCurrentPlayback } from '@/core/player/readCurrentPlayback'
 import { updateListMusics } from '@/core/list'
 import { setMaxplayTime, setNowPlayTime } from '@/core/player/progress'
 import { setCurrentTime, getDuration, getPosition } from '@/plugins/player'
@@ -27,9 +28,10 @@ export default () => {
   let isScreenOn = true
 
   const getCurrentTime = () => {
+    const generation = playerState.playbackGeneration
     let id = playerState.musicInfo.id
     void getPosition().then(position => {
-      if (!position || id != playerState.musicInfo.id) return
+      if (!position || generation !== playerState.playbackGeneration || id != playerState.musicInfo.id) return
       setNowPlayTime(position)
       if (!playerState.isPlay) return
 
@@ -39,7 +41,9 @@ export default () => {
     })
   }
   const getMaxTime = async() => {
-    setMaxplayTime(await getDuration())
+    const duration = await readCurrentPlayback(getDuration)
+    if (duration == null) return
+    setMaxplayTime(duration)
 
     if (playerState.playMusicInfo.musicInfo && 'source' in playerState.playMusicInfo.musicInfo && !playerState.playMusicInfo.musicInfo.interval) {
       // console.log(formatPlayTime2(playProgress.maxPlayTime))

@@ -1,5 +1,5 @@
 import { beforeEach, expect, it, vi } from 'vitest'
-import { addDislikeInfo, clearDislikeInfo } from '@/store/dislikeList/action'
+import { addDislikeInfo, clearDislikeInfo } from './testRules'
 import { filterForSubmission } from './submission'
 import type { SongRef } from './sameSong'
 

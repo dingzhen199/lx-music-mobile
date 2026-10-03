@@ -3,6 +3,7 @@ import { playList } from '@/core/player/player'
 import { getListDetail, getListDetailAll } from '@/core/songlist'
 import { LIST_IDS } from '@/config/constant'
 import listState from '@/store/list/state'
+import songlistState from '@/store/songlist/state'
 import syncSourceList from '@/core/syncSourceList'
 import { confirmDialog, toMD5, toast } from '@/utils/tools'
 import { type Source } from '@/store/songlist/state'
@@ -32,9 +33,10 @@ export const handlePlay = async(id: string, source: Source, list?: LX.Music.Musi
 }
 
 export const handleCollect = async(id: string, source: Source, name: string) => {
+  const info = { ...songlistState.listDetailInfo.info }
   const listId = getListId(id, source)
 
-  const targetList = listState.userList.find(l => l.sourceListId == listId)
+  const targetList = listState.userList.find(l => l.sourceListId == id && l.source == source)
   if (targetList) {
     const confirm = await confirmDialog({
       message: global.i18n.t('duplicate_list_tip', { name: targetList.name }),
@@ -42,7 +44,7 @@ export const handleCollect = async(id: string, source: Source, name: string) => 
       confirmButtonText: global.i18n.t('confirm_button_text'),
     })
     if (!confirm) return
-    void syncSourceList(targetList)
+    await syncSourceList(targetList).catch(() => { toast(global.i18n.t('list_update_error', { name: targetList.name })) })
     return
   }
 
@@ -53,6 +55,9 @@ export const handleCollect = async(id: string, source: Source, name: string) => 
     list,
     source,
     sourceListId: id,
+    cover: info.img,
+    desc: info.desc,
+    author: info.author,
   })
   toast(global.i18n.t('collect_success'))
 }

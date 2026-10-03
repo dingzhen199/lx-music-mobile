@@ -1,3 +1,4 @@
+import simiSong from './simiSong'
 import leaderboard from './leaderboard'
 import { apis } from '../api-source'
 import getLyric from './lyric'
@@ -9,6 +10,7 @@ import comment from './comment'
 // import tipSearch from './tipSearch'
 
 const wy = {
+  simiSong,
   // tipSearch,
   leaderboard,
   musicSearch,

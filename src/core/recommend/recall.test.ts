@@ -12,7 +12,7 @@ const mocks = vi.hoisted(() => ({
   getListMusics: vi.fn(),
 }))
 
-vi.mock('@/utils/musicSdk', () => ({ default: { searchMusic: mocks.searchMusic } }))
+vi.mock('@/utils/musicSdk', () => ({ searchMusic: mocks.searchMusic }))
 vi.mock('@/utils/listManage', () => ({ getListMusics: mocks.getListMusics }))
 vi.mock('@/core/recommend/adapters/listState', () => ({ loveList: { id: 'likelist' }, userLists: [] }))
 vi.mock('@/core/recommend/adapters/playerState', () => ({ playedList: [] }))

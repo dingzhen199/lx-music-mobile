@@ -35,7 +35,8 @@ export interface SeedMatchRowLike {
 }
 
 /** "mm:ss"（或 "h:mm:ss"）/数字时长 → 秒；无效返回 null。 */
-export const parseIntervalSec = (interval?: string | number | null): number | null => {
+export const parseIntervalSec = (interval?: unknown): number | null => {
+  if (typeof interval !== 'string' && typeof interval !== 'number') return null
   if (interval == null) return null
   if (typeof interval === 'number') return Number.isFinite(interval) && interval > 0 ? interval : null
   const text = String(interval).trim()

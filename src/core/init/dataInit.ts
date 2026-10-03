@@ -1,5 +1,6 @@
 // import { getPlayInfo } from '@/utils/data'
 // import { log } from '@/utils/log'
+import { autoUpdateOnlineLists } from '@/core/listAutoUpdate'
 import { init as musicSdkInit } from '@/utils/musicSdk'
 import { getUserLists, setUserList } from '@/core/list'
 import { setNavActiveId } from '../common'
@@ -26,11 +27,12 @@ export default async(appSetting: LX.AppSetting) => {
   // await Promise.all([
   //   initUserApi(), // 自定义API
   // ]).catch(err => log.error(err))
-  void musicSdkInit() // 初始化音乐sdk
+  const sdkReady = musicSdkInit() // 初始化音乐sdk
   bootLog('User list init...')
   setUserList(await getUserLists()) // 获取用户列表
   setDislikeInfo(await getDislikeInfo()) // 获取不喜欢列表
   bootLog('User list inited.')
+  void Promise.resolve(sdkReady).then(autoUpdateOnlineLists).catch(console.warn)
   setNavActiveId((await getViewPrevState()).id)
   void unlink(TEMP_FILE_PATH)
   // await initPrevPlayInfo(appSetting).catch(err => log.error(err)) // 初始化上次的歌曲播放信息

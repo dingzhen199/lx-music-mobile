@@ -1,10 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { appSetting } from '@/core/recommend/adapters/setting'
-import { rendererInvoke } from '@common/rendererIpc'
+import { llmTransport as rendererInvoke } from './adapters/llmTransport'
 import { llmComplete, llmCompleteWithValidation } from './llm'
 import type { RecommendLlmParams, RecommendLlmResult } from '@/config/recommendation'
 vi.mock('@/core/recommend/adapters/setting', async() => ({ appSetting: (await import('./adapters/reactive')).reactive({ 'ai.maxConcurrentRequests': 3 }) }))
-vi.mock('@common/rendererIpc', () => ({ rendererInvoke: vi.fn() }))
+vi.mock('./adapters/llmTransport', () => ({ llmTransport: vi.fn() }))
 const invoke = vi.mocked(rendererInvoke)
 const params: RecommendLlmParams = { apiKey: 'test', model: 'test', messages: [{ role: 'user', content: 'test' }] }
 beforeEach(() => { vi.useFakeTimers(); vi.clearAllMocks(); appSetting['ai.maxConcurrentRequests'] = 3 })
@@ -72,9 +72,9 @@ it('输出预算降档计入同一重试上限，后续同模型复用降档预�
   await vi.advanceTimersByTimeAsync(800)
   await result
   expect(invoke).toHaveBeenCalledTimes(2)
-  expect(invoke.mock.calls[1][1]).toMatchObject({ maxTokens: 8192 })
+  expect(invoke.mock.calls[1][0]).toMatchObject({ maxTokens: 8192 })
   await llmComplete(config)
-  expect(invoke.mock.calls[2][1]).toMatchObject({ maxTokens: 8192 })
+  expect(invoke.mock.calls[2][0]).toMatchObject({ maxTokens: 8192 })
 })
 
 it('并发设置实时生效：调大放行排队请求，调小等待在途完成', async() => {

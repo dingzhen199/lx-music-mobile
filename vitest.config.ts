@@ -1,3 +1,3 @@
 import { defineConfig } from 'vitest/config'
 import { resolve } from 'node:path'
-export default defineConfig({ resolve: { alias: { '@': resolve(__dirname, 'src'), '@renderer': resolve(__dirname, 'src'), '@common': resolve(__dirname, 'src/config') } }, test: { maxWorkers: 2, environment: 'node', include: ['src/**/*.test.ts'] } })
+export default defineConfig({ esbuild: { tsconfigRaw: { compilerOptions: { target: 'ES2022', useDefineForClassFields: true } } }, resolve: { alias: { '@': resolve(__dirname, 'src'), '@renderer': resolve(__dirname, 'src'), '@common': resolve(__dirname, 'src/config') } }, test: { maxWorkers: 1, environment: 'node', include: ['src/**/*.test.ts'] } })

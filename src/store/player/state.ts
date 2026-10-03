@@ -1,4 +1,6 @@
 export interface InitState {
+  playbackGeneration: number
+  resourceMusicId: string | null
   playMusicInfo: {
     /**
      * 当前播放歌曲的列表 id
@@ -12,6 +14,8 @@ export interface InitState {
      * 是否属于 “稍后播放”
      */
     isTempPlay: boolean
+    alternativeMusicInfos?: LX.Music.MusicInfoOnline[]
+    recommendationSessionId?: number
   }
   playInfo: LX.Player.PlayInfo
   musicInfo: LX.Player.MusicInfo
@@ -39,6 +43,8 @@ export interface InitState {
 }
 
 const state: InitState = {
+  playbackGeneration: 0,
+  resourceMusicId: null,
   playInfo: {
     playIndex: -1,
     playerListId: null,

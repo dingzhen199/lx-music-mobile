@@ -16,15 +16,15 @@ export const initRecommendAdapters = () => {
   settings()
   syncRecommendPlayer()
   syncRecommendLists()
-  global.state_event.on('configUpdated', settings)
-  global.state_event.on('playMusicInfoChanged', syncRecommendPlayer)
-  global.state_event.on('playStateChanged', syncRecommendPlayer)
-  global.state_event.on('playTempPlayListChanged', syncRecommendPlayer)
-  global.state_event.on('playPlayedListChanged', syncRecommendPlayer)
-  global.state_event.on('playProgressChanged', () => {
+  global.state_event.onSync('configUpdated', settings)
+  global.state_event.onSync('playMusicInfoChanged', syncRecommendPlayer)
+  global.state_event.onSync('playStateChanged', syncRecommendPlayer)
+  global.state_event.onSync('playTempPlayListChanged', syncRecommendPlayer)
+  global.state_event.onSync('playPlayedListChanged', syncRecommendPlayer)
+  global.state_event.onSync('playProgressChanged', () => {
     const hadDuration = playProgress.maxPlayTime > 0
     Object.assign(playProgress, state.progress)
     if (!hadDuration && playProgress.maxPlayTime > 0) global.app_event.playerLoadeddata()
   })
-  global.app_event.on('mylistUpdated', syncRecommendLists)
+  global.app_event.onSync('mylistUpdated', syncRecommendLists)
 }

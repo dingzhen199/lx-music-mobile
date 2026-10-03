@@ -10,6 +10,12 @@ declare namespace LX {
       qualitys: LX.Quality[]
     }
 
+    interface UserApiRuntimeSource {
+      getMusicUrl?: (musicInfo: any, quality: LX.Quality) => { promise: Promise<{ url: string, type: LX.Quality }>, canceleFn: () => void }
+      getLyric?: (musicInfo: any) => { promise: Promise<LX.Music.LyricInfo>, canceleFn: () => void }
+      getPic?: (musicInfo: any) => { promise: Promise<string>, canceleFn: () => void }
+    }
+    type UserApiRuntimeSources = Partial<Record<LX.Source, UserApiRuntimeSource>>
     type UserApiSources = Record<LX.Source, UserApiSourceInfo>
 
 

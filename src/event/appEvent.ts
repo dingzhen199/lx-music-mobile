@@ -40,8 +40,8 @@ export class AppEvent extends Event {
   /**
    * 音乐信息切换
    */
-  musicToggled() {
-    this.emit('musicToggled')
+  musicToggled(reason: 'user' | 'ended' | 'error' | 'removed' = 'user') {
+    this.emit('musicToggled', reason)
   }
 
   /**
@@ -106,9 +106,13 @@ export class AppEvent extends Event {
     this.emit('playerError')
   }
 
-  // playerLoadeddata() {
-  //   this.emit('playerLoadeddata')
-  // }
+  playerLoadeddata() {
+    this.emit('playerLoadeddata')
+  }
+
+  loveListMusicsAdded(musics: LX.Music.MusicInfo[]) {
+    this.emit('loveListMusicsAdded', musics)
+  }
 
   playerLoadstart() {
     this.emit('playerLoadstart')
@@ -212,7 +216,7 @@ declare class EventType extends AppEvent {
   off<K extends keyof EventMethods>(event: K, listener: EventMethods[K]): any
 }
 
-export type AppEventTypes = Omit<EventType, keyof Omit<Event, 'on' | 'off'>>
+export type AppEventTypes = Omit<EventType, keyof Omit<Event, 'on' | 'off' | 'onSync' | 'offSync'>>
 export const createAppEventHub = (): AppEventTypes => {
   return new AppEvent()
 }

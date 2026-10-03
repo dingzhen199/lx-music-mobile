@@ -1,3 +1,4 @@
+import { recommendEvents } from './adapters/events'
 /**
  * 本地用户画像编排适配器（TP-2，薄层）。
  *
@@ -306,13 +307,13 @@ const subscribe = (): void => {
     // 先按旧速率结算在途分段，暂停时只更新下一段使用的速率。
     if (playTime.playing) settlePlayTime('play', Date.now())
     listeningRate = rate
-  }, {})
-  global.app_event.on('musicToggled', handleMusicToggled)
-  global.app_event.on('play', handlePlay)
-  global.app_event.on('pause', handlePause)
-  global.app_event.on('stop', handlePause)
-  global.app_event.on('playerLoadeddata', handlePlayerLoadeddata)
-  global.app_event.on('loveListMusicsAdded', handleLoveListMusicsAdded)
+  }, { flush: 'sync' })
+  recommendEvents.on('musicToggled', handleMusicToggled)
+  recommendEvents.on('play', handlePlay)
+  recommendEvents.on('pause', handlePause)
+  recommendEvents.on('stop', handlePause)
+  recommendEvents.on('playerLoadeddata', handlePlayerLoadeddata)
+  recommendEvents.on('loveListMusicsAdded', handleLoveListMusicsAdded)
 }
 
 /**

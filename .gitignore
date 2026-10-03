@@ -66,3 +66,6 @@ buck-out/
 
 # testing
 /coverage
+
+# Also ignore an environment-local dependency symlink
+/node_modules

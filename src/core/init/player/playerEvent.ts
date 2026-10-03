@@ -26,7 +26,7 @@ export default () => {
       // 如果加载超时，则尝试刷新URL
       if (prevTimeoutId == playerState.musicInfo.id) {
         prevTimeoutId = null
-        void playNext(true)
+        void playNext(true, 'error')
       } else {
         prevTimeoutId = playerState.musicInfo.id
         if (playerState.playMusicInfo.musicInfo) setMusicUrl(playerState.playMusicInfo.musicInfo, true)
@@ -53,7 +53,7 @@ export default () => {
         setStatusText('')
         return
       }
-      void playNext(true)
+      void playNext(true, 'error')
     }, 5000)
   }
 
@@ -110,7 +110,7 @@ export default () => {
       setTimeout(addDelayNextTimeout)
     } else {
       console.warn('error skip to next')
-      void playNext(true)
+      void playNext(true, 'error')
     }
   }
 

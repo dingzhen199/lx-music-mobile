@@ -1,8 +1,5 @@
-import { MessageChannel } from 'node:worker_threads'
-import { expose, wrap } from 'comlink'
-import nodeEndpoint from 'comlink/dist/umd/node-adapter'
-import { describe, expect, it, vi } from 'vitest'
-import { isReactive, reactive, toRaw } from 'vue'
+import { describe, expect, it } from 'vitest'
+import { isReactive, reactive, toRaw } from '@vue/runtime-core'
 import defaultSetting from '@/config/defaultSetting'
 import { stripSensitiveSetting } from './sensitiveSetting'
 
@@ -66,7 +63,7 @@ describe.each([
       'ai.baseUrl': 'https://example.com/v1',
     },
   },
-])('响应式设置经过真实 Comlink 克隆边界：$name', ({ overrides }) => {
+])('响应式设置经过移动端 JSON 持久化边界：$name', ({ overrides }) => {
   it.each(['setting_v2', 'allData_v2'] as const)('%s 可传输且只剔除 API Key', async(type) => {
     const setting = reactive<LX.AppSetting>({ ...defaultSetting, ...overrides })
     const original = structuredClone(toRaw(setting))
@@ -81,22 +78,10 @@ describe.each([
     const expectedPayload = type == 'setting_v2'
       ? { type, data: expectedSetting }
       : { type, setting: expectedSetting, playList: [] }
-    // 只替换文件写入；Comlink 和 MessageChannel 使用实际实现，接收端才序列化。
-    const saveLxConfigFile = vi.fn((_path: string, data: unknown) => JSON.stringify(data))
-    const worker = { saveLxConfigFile }
-    const { port1, port2 } = new MessageChannel()
-    expose(worker, nodeEndpoint(port1))
-    const remote = wrap<typeof worker>(nodeEndpoint(port2))
-
-    try {
-      const serialized = await remote.saveLxConfigFile('settings.lxmc', payload)
-      expect(JSON.parse(serialized)).toEqual(expectedPayload)
-      expect(saveLxConfigFile).toHaveBeenCalledWith('settings.lxmc', expectedPayload)
-      expect(exported).not.toBe(setting)
-      expect(setting).toEqual(original)
-    } finally {
-      port1.close()
-      port2.close()
-    }
+    const serialized = JSON.stringify(payload)
+    expect(JSON.parse(serialized)).toEqual(expectedPayload)
+    expect(serialized).not.toContain('sk-secret-key')
+    expect(exported).not.toBe(setting)
+    expect(setting).toEqual(original)
   })
 })

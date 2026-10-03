@@ -1,3 +1,6 @@
+import Button from '@/screens/Home/Views/Setting/components/Button'
+import { updateSetting } from '@/core/common'
+import { useI18n } from '@/lang'
 import { memo, useMemo } from 'react'
 import { View } from 'react-native'
 import { useKeyboard } from '@/utils/hooks'
@@ -16,6 +19,8 @@ export default memo(({ isHome = false }: { isHome?: boolean }) => {
   // const { onLayout, ...layout } = useLayout()
   const { keyboardShown } = useKeyboard()
   const theme = useTheme()
+  const t = useI18n()
+  const radio = useSettingValue('recommend.radio')
   const autoHidePlayBar = useSettingValue('common.autoHidePlayBar')
 
   const playerComponent = useMemo(() => (
@@ -29,10 +34,11 @@ export default memo(({ isHome = false }: { isHome?: boolean }) => {
         <PlayInfo isHome={isHome} />
       </View>
       <View style={styles.right}>
+        <Button onPress={() => { updateSetting({ 'recommend.radio': !radio }) }}>{radio ? '◉' : '◎'} {t('recommend_radio_short')}</Button>
         <ControlBtn />
       </View>
     </View>
-  ), [theme, isHome])
+  ), [theme, isHome, radio, t])
 
   // console.log('render pb')
 

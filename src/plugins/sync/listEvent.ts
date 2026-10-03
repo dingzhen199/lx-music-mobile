@@ -1,15 +1,19 @@
+import { fillUserListMeta } from './listMetaFill'
 import { LIST_IDS } from '@/config/constant'
 import { getListMusics } from '@/core/list'
 import { userLists } from '@/utils/listManage'
 
 // 构建列表信息对象，用于统一字段位置顺序
-export const buildUserListInfoFull = ({ id, name, source, sourceListId, list, locationUpdateTime }: LX.List.UserListInfoFull) => {
+export const buildUserListInfoFull = ({ id, name, source, sourceListId, list, locationUpdateTime, cover, desc, author }: LX.List.UserListInfoFull) => {
   return {
     id,
     name,
     source,
     sourceListId,
     locationUpdateTime,
+    cover,
+    desc,
+    author,
     list,
   }
 }
@@ -30,7 +34,14 @@ export const getLocalListData = async(): Promise<LX.Sync.List.ListData> => {
 }
 
 export const setLocalListData = async(listData: LX.Sync.List.ListData) => {
-  await global.list_event.list_data_overwrite(listData, true)
+  const userList = listData.userList.map(info => {
+    const existing = userLists.find(local => local.id === info.id)
+    if (!existing) return info
+    const filled = { ...info }
+    fillUserListMeta(filled, existing)
+    return filled
+  })
+  await global.list_event.list_data_overwrite({ ...listData, userList }, true)
 }
 
 
@@ -117,7 +128,7 @@ export const handleRemoteListAction = async({ action, data }: LX.Sync.List.Actio
 
   switch (action) {
     case 'list_data_overwrite':
-      await global.list_event.list_data_overwrite(data, true)
+      await setLocalListData(data)
       break
     case 'list_create':
       await global.list_event.list_create(data.position, data.listInfos, true)

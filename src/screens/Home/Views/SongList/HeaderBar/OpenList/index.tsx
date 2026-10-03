@@ -29,7 +29,7 @@ export default forwardRef<OpenListType, {}>((props, ref) => {
     },
   }))
 
-  const handleOpenSonglist = (id: string) => {
+  const handleOpenSonglist = (id: string, source: Source) => {
     // console.log(id, songlistInfoRef.current.source)
     navigations.pushSonglistDetailScreen(commonState.componentIds.home!, {
       play_count: undefined,
@@ -38,7 +38,7 @@ export default forwardRef<OpenListType, {}>((props, ref) => {
       name: '',
       img: undefined,
       desc: undefined,
-      source: songlistInfoRef.current.source,
+      source,
     })
   }
 

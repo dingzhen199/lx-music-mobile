@@ -10,6 +10,7 @@ import { LIST_SCROLL_POSITION_KEY } from '@/config/constant'
 import { getListPosition, saveListPosition } from '@/utils/data'
 import { setActiveList } from '@/core/list'
 import Text from '@/components/common/Text'
+import Image from '@/components/common/Image'
 import { type Position } from './ListMenu'
 import { scaleSizeH } from '@/utils/pixelRatio'
 import Loading from '@/components/common/Loading'
@@ -52,6 +53,7 @@ const ListItem = memo(({ item, index, activeId, onPress, onShowMenu }: {
           : null
       }
       { fetching ? <Loading color={active ? theme['c-primary-font'] : theme['c-font']} style={styles.loading} /> : null }
+      {'cover' in item && item.cover ? <Image url={item.cover} style={{ width: 24, height: 24, marginLeft: 5, borderRadius: 4 }} /> : null}
       <TouchableOpacity style={styles.listName} onPress={handlePress}>
         <Text numberOfLines={1} color={active ? theme['c-primary-font'] : theme['c-font']}>{item.name}</Text>
       </TouchableOpacity>

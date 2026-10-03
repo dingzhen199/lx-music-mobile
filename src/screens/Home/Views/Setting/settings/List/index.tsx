@@ -1,6 +1,7 @@
 import { memo } from 'react'
 
 import Section from '../../components/Section'
+import OnlineListUpdates from './OnlineListUpdates'
 import AddMusicLocationType from './AddMusicLocationType'
 import IsClickPlayList from './IsClickPlayList'
 import IsShowAlbumName from './IsShowAlbumName'
@@ -17,6 +18,7 @@ export default memo(() => {
       <IsShowAlbumName />
       <IsShowInterval />
       <AddMusicLocationType />
+      <OnlineListUpdates />
     </Section>
   )
 })

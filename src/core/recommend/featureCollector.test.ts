@@ -2,13 +2,14 @@ import { EventEmitter } from 'node:events'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { AudioFeatureCollector } from './feature'
 
-vi.mock('@/core/recommend/adapters/analyser', () => ({ getAnalyser: () => null }))
+vi.mock('react-native', () => ({ NativeModules: {}, Platform: { OS: 'android' } }))
+vi.mock('./adapters/analyser', () => ({ getAnalyser: () => null, configureAudioAnalysis: vi.fn(), refreshAnalyser: vi.fn(async() => {}), releaseAudioAnalysis: vi.fn() }))
 let collector: AudioFeatureCollector
 let events: EventEmitter
 beforeEach(() => {
   vi.useFakeTimers()
   events = new EventEmitter()
-  vi.stubGlobal('global', { app_event: events })
+  vi.stubGlobal('app_event', events)
   collector = new AudioFeatureCollector()
 })
 afterEach(() => { collector.stop(); vi.useRealTimers(); vi.unstubAllGlobals() })

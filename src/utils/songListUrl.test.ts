@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { parseSongListUrl } from './songListUrl'
+import { parseSongListUrl, resolveSongListInput } from './songListUrl'
 
 describe('歌单链接音源识别', () => {
   it('识别各平台常规歌单链接', () => {
@@ -29,4 +29,12 @@ describe('歌单链接音源识别', () => {
   it('纯数字 id 不自动猜测音源', () => {
     expect(parseSongListUrl('123456')).toBeNull()
   })
+})
+
+it('preserves tokens and selected-provider numeric IDs on submission', () => {
+  expect(resolveSongListInput('123###secret', 'wy')).toEqual({ source: 'wy', id: '123###secret' })
+  expect(resolveSongListInput('https://music.163.com/#/playlist?id=1###secret', 'kw')).toEqual({ source: 'wy', id: 'https://music.163.com/#/playlist?id=1###secret' })
+  expect(resolveSongListInput('https://y.qq.com/n/yqq/playlist/456.html', 'kw')).toEqual({ source: 'tx', id: '456' })
+  expect(parseSongListUrl('https://music.163.com.evil.test/playlist?id=1')).toBeNull()
+  expect(parseSongListUrl('https://music.163.com@evil.test/playlist?id=1')).toBeNull()
 })

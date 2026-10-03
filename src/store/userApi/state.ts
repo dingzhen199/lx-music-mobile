@@ -5,7 +5,7 @@ interface InitState {
     status: boolean
     message?: string
   }
-  apis: Record<string, Partial<LX.UserApi.UserApiSources>>
+  apis: Record<string, LX.UserApi.UserApiRuntimeSources>
   qualityLists: Record<string, LX.QualityList>
   statuses: Record<string, { status: boolean, message?: string }>
 }

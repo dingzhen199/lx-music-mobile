@@ -1,4 +1,4 @@
-import { type InitParams, onScriptAction, sendAction, type ResponseParams, type UpdateInfoParams, type RequestParams } from '@/utils/nativeModules/userApi'
+import { type InitParams, onScriptAction, onRuntimeDestroyed, sendAction, type ResponseParams, type UpdateInfoParams, type RequestParams } from '@/utils/nativeModules/userApi'
 import { log, setUserApiList, setUserApiStatus } from '@/core/userApi'
 import settingState from '@/store/setting/state'
 import { state, action } from '@/store/userApi'
@@ -9,8 +9,22 @@ import { confirmDialog, openUrl, tipDialog } from '@/utils/tools'
 
 
 export default async(setting: LX.AppSetting) => {
-  const userApiRequestMap = new Map<string, { resolve: (value: ResponseParams['result']) => void, reject: (error: Error) => void, timeout: number }>()
-  const scriptRequestMap = new Map<string, { request: Promise<any>, abort: () => void }>()
+  const userApiRequestMap = new Map<string, { apiId: string, token: string, resolve: (value: ResponseParams['result']) => void, reject: (error: Error) => void, timeout: number }>()
+  const scriptRequestMap = new Map<string, { apiId: string, request: Promise<any>, abort: () => void }>()
+
+  onRuntimeDestroyed(apiId => {
+    for (const [key, target] of userApiRequestMap) {
+      if (apiId && target.apiId !== apiId) continue
+      userApiRequestMap.delete(key)
+      BackgroundTimer.clearTimeout(target.timeout)
+      target.reject(new Error('api unloaded'))
+    }
+    for (const [key, target] of scriptRequestMap) {
+      if (apiId && target.apiId !== apiId) continue
+      scriptRequestMap.delete(key)
+      target.abort()
+    }
+  })
 
   const cancelRequest = (requestKey: string, message: string) => {
     const target = scriptRequestMap.get(requestKey)
@@ -37,7 +51,7 @@ export default async(setting: LX.AppSetting) => {
     }).finally(() => {
       scriptRequestMap.delete(mapKey)
     })
-    scriptRequestMap.set(mapKey, req)
+    scriptRequestMap.set(mapKey, { ...req, apiId })
   }
   const sendUserApiRequest = async(data: LX.UserApi.UserApiRequestParams, apiId: string, token: string) => {
     const handleApiUpdate = () => {
@@ -49,6 +63,8 @@ export default async(setting: LX.AppSetting) => {
     }
     const requestPromise = new Promise<ResponseParams['result']>((resolve, reject) => {
       userApiRequestMap.set(data.requestKey, {
+        apiId,
+        token,
         resolve,
         reject,
         timeout: BackgroundTimer.setTimeout(() => {
@@ -60,14 +76,19 @@ export default async(setting: LX.AppSetting) => {
       })
       sendAction('request', data, apiId, token)
     }).finally(() => {
+      const pending = userApiRequestMap.get(data.requestKey)
+      if (pending) {
+        userApiRequestMap.delete(data.requestKey)
+        BackgroundTimer.clearTimeout(pending.timeout)
+      }
       global.state_event.off('apiSourceUpdated', handleApiUpdate)
     })
     global.state_event.on('apiSourceUpdated', handleApiUpdate)
     return requestPromise
   }
-  const handleUserApiResponse = ({ status, result, requestKey, errorMessage }: ResponseParams) => {
+  const handleUserApiResponse = ({ status, result, requestKey, errorMessage }: ResponseParams, apiId: string, token: string) => {
     const target = userApiRequestMap.get(requestKey)
-    if (!target) return
+    if (!target || target.apiId !== apiId || target.token !== token) return
     userApiRequestMap.delete(requestKey)
     BackgroundTimer.clearTimeout(target.timeout)
     if (status) target.resolve(result)
@@ -229,7 +250,7 @@ export default async(setting: LX.AppSetting) => {
         handleStateChange(event.data, event.apiId, event.token)
         break
       case 'response':
-        handleUserApiResponse(event.data)
+        handleUserApiResponse(event.data, event.apiId, event.token)
         break
       case 'request':
         sendScriptRequest(event.data.requestKey, event.data.url, event.data.options, event.apiId, event.token)

@@ -119,8 +119,8 @@ const setPlayerMusicInfo = (musicInfo: LX.Music.MusicInfo | LX.Download.ListItem
  * @param musicInfo 歌曲信息
  * @param isTempPlay 是否临时播放
  */
-export const setPlayMusicInfo = (listId: string | null, musicInfo: LX.Download.ListItem | LX.Music.MusicInfo | null, isTempPlay: boolean = false) => {
-  playerActions.setPlayMusicInfo(listId, musicInfo, isTempPlay)
+export const setPlayMusicInfo = (listId: string | null, musicInfo: LX.Download.ListItem | LX.Music.MusicInfo | null, isTempPlay: boolean = false, metadata: Pick<LX.Player.PlayMusicInfo, 'alternativeMusicInfos' | 'recommendationSessionId'> = {}, reason: 'user' | 'ended' | 'error' | 'removed' = 'user') => {
+  playerActions.setPlayMusicInfo(listId, musicInfo, isTempPlay, metadata)
   setPlayerMusicInfo(musicInfo)
 
   setProgress(0, 0)
@@ -132,7 +132,7 @@ export const setPlayMusicInfo = (listId: string | null, musicInfo: LX.Download.L
     const { playIndex, playerPlayIndex } = getPlayIndex(listId, musicInfo, isTempPlay)
 
     playerActions.updatePlayIndex(playIndex, playerPlayIndex)
-    global.app_event.musicToggled()
+    global.app_event.musicToggled(reason)
   }
 }
 

@@ -1,3 +1,4 @@
+import simiSong from './simiSong'
 import leaderboard from './leaderboard'
 import lyric from './lyric'
 import songList from './songList'
@@ -8,6 +9,7 @@ import comment from './comment'
 // import tipSearch from './tipSearch'
 
 const tx = {
+  simiSong,
   // tipSearch,
   leaderboard,
   songList,

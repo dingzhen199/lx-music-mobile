@@ -74,17 +74,21 @@ export const parseSongListUrl = (input: string): ParsedSongListUrl | null => {
     // 去除链接末尾混入的标点与中文等非链接内容
     .replace(/[.,;!?'"()（\u4e00-\u9fff，。；：！？、）】》'’”]+$/, '')
   if (!urlText) return null
-  let url: URL
-  try {
-    url = new URL(/^https?:\/\//i.test(urlText) ? urlText : `https://${urlText}`)
-  } catch {
-    return null
-  }
-  const hostname = url.hostname.toLowerCase()
+  // React Native's built-in URL implementation does not implement every URL getter.
+  // Only the authority is needed; reject credentials and malformed hostnames.
+  const authority = /^(?:https?:\/\/)?([^/?#]+)/i.exec(urlText)?.[1]
+  const hostname = authority && /^([a-z0-9.-]+)(?::\d+)?$/i.exec(authority)?.[1]?.toLowerCase()
+  if (!hostname) return null
   for (const { source, regExp } of sourceHostRegExps) {
     if (!regExp.test(hostname)) continue
     const id = parseIdBySource[source](urlText)
     return id ? { source, id } : null
   }
   return null
+}
+
+export const resolveSongListInput = (input: string, fallbackSource: LX.OnlineSource): ParsedSongListUrl => {
+  const value = input.trim()
+  const parsed = parseSongListUrl(value)
+  return { source: parsed?.source ?? fallbackSource, id: parsed && !value.includes('###') ? parsed.id : value }
 }

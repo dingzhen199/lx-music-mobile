@@ -3,6 +3,7 @@ import type { Track as RNTrack } from 'react-native-track-player'
 declare global {
   namespace LX {
     namespace Player {
+      type MusicChangeReason = 'user' | 'ended' | 'error' | 'removed'
       interface MusicInfo {
         id: string | null
         pic: string | null | undefined
@@ -31,11 +32,13 @@ declare global {
         /**
           * 当前播放歌曲的列表 id
           */
-        listId: string
+        listId: string | null
         /**
           * 是否属于 “稍后播放”
           */
         isTempPlay: boolean
+        alternativeMusicInfos?: LX.Music.MusicInfoOnline[]
+        recommendationSessionId?: number
       }>
 
       interface PlayInfo {
@@ -66,6 +69,8 @@ declare global {
          * 是否添加到列表顶部
          */
         isTop?: boolean
+        alternativeMusicInfos?: LX.Music.MusicInfoOnline[]
+        recommendationSessionId?: number
       }
 
       interface SavedPlayInfo {

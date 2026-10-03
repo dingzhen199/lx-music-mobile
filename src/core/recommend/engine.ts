@@ -12,7 +12,7 @@ import { addTempPlayList } from '@/core/recommend/adapters/playerAction'
 import { hasDislike } from '@/store/dislikeList/action'
 import { playProgress } from '@/core/recommend/adapters/playProgress'
 import { playMusicInfo } from '@/core/recommend/adapters/playerState'
-import { getFeatureCollector, startFeatureCollection, stopFeatureCollection, summarizeBuckets } from './feature'
+import { getFeatureCollector, summarizeBuckets } from './feature'
 import type { FeatureSheet } from './feature'
 import { extractRankingRows, parseLooseJson } from './json'
 import {

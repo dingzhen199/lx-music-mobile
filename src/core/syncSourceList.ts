@@ -1,12 +1,10 @@
 // import { dateFormat } from '@/utils/common'
-import { setListUpdateTime } from '@/utils/data'
+import { setListUpdateTime, setListUpdateError } from '@/utils/data'
 import { overwriteListMusics, setFetchingListStatus } from './list'
 import { getListDetailAll } from '@/core/songlist'
 import { getListDetailAll as getBoardListAll } from '@/core/leaderboard'
 
 const fetchList = async(id: string, source: LX.OnlineSource, sourceListId: string) => {
-  setFetchingListStatus(id, true)
-
   let promise
   if (/^board__/.test(sourceListId)) {
     const id = sourceListId.replace(/^board__/, '')
@@ -14,19 +12,23 @@ const fetchList = async(id: string, source: LX.OnlineSource, sourceListId: strin
   } else {
     promise = getListDetailAll(source, sourceListId, true)
   }
-  return promise.finally(() => {
-    setFetchingListStatus(id, false)
-  })
+  return promise
 }
 
 export default async(targetListInfo: LX.List.UserListInfo) => {
   // console.log(targetListInfo)
   if (!targetListInfo.source || !targetListInfo.sourceListId) return
-  const list = await fetchList(targetListInfo.id, targetListInfo.source, targetListInfo.sourceListId)
-  // console.log(list)
-  void overwriteListMusics(targetListInfo.id, list)
-  const now = Date.now()
-  void setListUpdateTime(targetListInfo.id, now)
-  // TODO
-  // setUpdateTime(targetListInfo.id, dateFormat(now))
+  setFetchingListStatus(targetListInfo.id, true)
+  try {
+    const list = await fetchList(targetListInfo.id, targetListInfo.source, targetListInfo.sourceListId)
+    await overwriteListMusics(targetListInfo.id, list)
+    await setListUpdateTime(targetListInfo.id, Date.now())
+    await setListUpdateError(targetListInfo.id, null)
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    await setListUpdateError(targetListInfo.id, message).catch(() => {})
+    throw error
+  } finally {
+    setFetchingListStatus(targetListInfo.id, false)
+  }
 }

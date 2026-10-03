@@ -21,7 +21,7 @@ export default () => {
       // } else
       if (!playerState.playMusicInfo.isTempPlay) {
         // console.log('current music removed')
-        void playNext(true)
+        void playNext(true, 'removed')
       }
     }
   })

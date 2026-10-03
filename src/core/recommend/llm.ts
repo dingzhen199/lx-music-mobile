@@ -1,9 +1,8 @@
 /** 推荐 LLM 通道：共享并发上限，按单次请求重试（含输出校验），不重跑已成功的批次。 */
-import { RECOMMENDATION_EVENT_NAME } from '@common/ipcNames'
 import { appSetting } from '@/core/recommend/adapters/setting'
 import { watch } from '@/core/recommend/adapters/reactive'
 import { normalizeLlmConcurrency } from '@/config/recommendationConfig'
-import { rendererInvoke } from '@common/rendererIpc'
+import { llmTransport } from './adapters/llmTransport'
 import type { RecommendLlmParams, RecommendLlmResult } from '@/config/recommendation'
 
 /** n 次重试 = 初始请求 + n 次；HTTP 层不再叠加重试。 */
@@ -44,7 +43,7 @@ const invoke = async(params: RecommendLlmParams, options: LlmCallOptions): Promi
   })
   try {
     checkCancelled(options)
-    return await rendererInvoke<RecommendLlmParams, RecommendLlmResult>(RECOMMENDATION_EVENT_NAME.llm_complete, params)
+    return await llmTransport(params)
   } finally {
     active--
     drain()

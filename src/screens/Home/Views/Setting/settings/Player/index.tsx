@@ -1,3 +1,4 @@
+import Recommendation from './Recommendation'
 import { memo } from 'react'
 
 import Section from '../../components/Section'
@@ -21,6 +22,7 @@ export default memo(() => {
 
   return (
     <Section title={t('setting_player')}>
+      <Recommendation />
       <IsSavePlayTime />
       <IsAutoCleanPlayedList />
       <IsHandleAudioFocus />

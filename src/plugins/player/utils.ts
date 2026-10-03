@@ -1,3 +1,4 @@
+import playerState from '@/store/player/state'
 import TrackPlayer, { Capability, Event, RepeatMode, State } from 'react-native-track-player'
 import BackgroundTimer from 'react-native-background-timer'
 import { playMusic as handlePlayMusic } from './playList'
@@ -151,6 +152,7 @@ const playMusic = ((fn: (musicInfo: LX.Player.PlayMusic, url: string, time: numb
 })
 
 export const setResource = (musicInfo: LX.Player.PlayMusic, url: string, duration?: number) => {
+  playerState.resourceMusicId = musicInfo.id
   playMusic(musicInfo, url, duration ?? 0)
 }
 

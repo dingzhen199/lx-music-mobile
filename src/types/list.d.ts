@@ -8,6 +8,9 @@ declare namespace LX {
       sourceListId?: string
       // position?: number
       locationUpdateTime: number | null
+      cover?: string | null
+      desc?: string | null
+      author?: string | null
     }
 
     interface MyDefaultListInfo {
@@ -47,6 +50,7 @@ declare namespace LX {
     type ListUpdateInfo = Record<string, {
       updateTime: number
       isAutoUpdate: boolean
+      updateError?: string | null
     }>
 
     type ListSaveType = 'myList' | 'downloadList'

@@ -13,7 +13,7 @@ import { getListMusics } from '@/utils/listManage'
 import { loveList, userLists } from '@/core/recommend/adapters/listState'
 import { playedList } from '@/core/recommend/adapters/playerState'
 import { toNewMusicInfo } from '@/utils'
-import musicSdk from '@/utils/musicSdk'
+import { searchMusic } from '@/utils/musicSdk'
 import { buildCandidatePool } from './candidatePool'
 import type { SongIdentity } from './songIdentity'
 import { SEMANTIC_DISTANCE_BASE, SEMANTIC_DISTANCE_STEP, trimSemanticQueries } from './gates'
@@ -63,8 +63,10 @@ export interface RecallResult {
 }
 
 /** 搜索原始条目是否具备可用 id（无 songmid/hash/copyrightId/strMediaMid 的不可播放条目直接丢弃）。 */
-const rawHasId = (raw: Record<string, any>): boolean => {
-  return Boolean(raw && (raw.songmid || raw.hash || raw.copyrightId || raw.strMediaMid))
+const rawHasId = (value: unknown): boolean => {
+  if (!value || typeof value !== 'object') return false
+  const raw = value as Record<string, unknown>
+  return Boolean(raw.songmid || raw.hash || raw.copyrightId || raw.strMediaMid)
 }
 
 /** 同艺人查询关键词：优先歌手名，缺失时退回歌名。 */
@@ -153,7 +155,7 @@ const searchByQuery = async(
   const out: RecallCandidate[] = []
   let results: Array<{ list: any[], source: string }> | null = null
   try {
-    results = (await musicSdk.searchMusic({ name: q.keyword, singer: '', source: '', limit: 10 })) as Array<{ list: any[], source: string }> | null
+    results = (await searchMusic({ name: q.keyword, singer: '', source: '', limit: 10 })) as Array<{ list: any[], source: string }> | null
   } catch (err) {
     console.error('[recall] 搜索失败', q.keyword, err)
     return out

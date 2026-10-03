@@ -1,3 +1,12 @@
+## 未发布：桌面推荐与歌单功能移动端适配
+
+- 新增聚合推荐、探索电台、AI/本地引擎、用户画像和本地指标
+- 新增有序备用音源与独立脚本运行时；修复导入/删除竞态及保存失败时旧数据丢失
+- 新增跨平台链接识别、在线歌单信息与更新管理，修复同步/导入时元信息丢失
+- 修复切歌代次、异步时长回调、备用曲目证据和换源写回边界
+- 新增可选 Android 播放音频事实单与明确的权限/硬件卸载约束
+- Android 原生构建与真机验收尚未完成；详见 docs/desktop-parity
+
 # lx-music-mobile change log
 
 All notable changes to this project will be documented in this file.

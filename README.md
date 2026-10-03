@@ -1,3 +1,14 @@
+## 本分支：桌面功能移动端适配
+
+本分支以桌面 `feat/aggregate-recommendation-playlist-import` 的固定提交 `df3e97915d40bd7b9efceb8421a120637b0c4617` 为参考，加入：
+
+- 平台聚合推荐（默认不调用 AI）、AI/本地探索电台、连续续补、反馈、路径和本地画像
+- 有序主/备自定义音源、独立运行时与初始化超时，导入/删除持久化失败保护
+- 歌单链接平台识别、原始来源信息保存、启动自动更新与手动更新管理
+- 可选的 Android 本应用播放音频统计。需显式授权并关闭音频硬件卸载；是近似信号统计，不是桌面 WebAudio 的逐样本等价实现
+
+实现/验证矩阵见 [移动端适配记录](docs/desktop-parity/requirements.md)。主机测试、JS bundle 与 Android 原生/真机验证分开记录；本段不表示已完成真机验收。
+
 <p align="center"><a href="https://github.com/lyswhut/lx-music-mobile"><img width="200" src="https://github.com/lyswhut/lx-music-mobile/blob/master/doc/images/icon.png" alt="lx-music logo"></a></p>
 
 <h1 align="center">LX Music 移动版</h1>

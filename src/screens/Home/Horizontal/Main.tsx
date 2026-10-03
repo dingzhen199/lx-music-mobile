@@ -1,3 +1,4 @@
+import Explore from '../Views/Explore'
 import { useEffect, useMemo, useState } from 'react'
 import Search from '../Views/Search'
 import SongList from '../Views/SongList'
@@ -27,6 +28,7 @@ const Main = () => {
       case 'nav_songlist': return <SongList />
       case 'nav_top': return <Leaderboard />
       case 'nav_love': return <Mylist />
+      case 'nav_explore': return <Explore />
       case 'nav_setting': return <Setting />
       case 'nav_search':
       default: return <Search />

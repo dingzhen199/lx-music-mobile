@@ -72,7 +72,8 @@ beforeEach(async() => {
   mocks.removeQueue.mockImplementation(index => mocks.queue.splice(index, 1))
   mocks.addQueue.mockImplementation(items => mocks.queue.push(...items))
   events = new EventEmitter()
-  vi.stubGlobal('global', { lx: { isProd: true }, app_event: events })
+  vi.stubGlobal('lx', { isProd: true })
+  vi.stubGlobal('app_event', events)
   setting = (await import('@/core/recommend/adapters/setting')).appSetting
   session = await import('./session')
 })

@@ -1,3 +1,4 @@
+import { normalizeApiSourceBackups } from '@/core/userApiConfig'
 import { storageDataPrefix, storageDataPrefixOld } from '@/config/constant'
 import defaultSetting from '@/config/defaultSetting'
 import { getData, removeData, saveData } from '@/plugins/storage'
@@ -29,7 +30,7 @@ const mergeSetting = (originSetting: LX.AppSetting, targetSetting?: Partial<LX.A
     if (originSettingKeys.length > targetSettingKeys.length) {
       for (const key of targetSettingKeys as Array<keyof LX.AppSetting>) {
         const targetValue: any = targetSetting[key]
-        const isPrimitive = checkPrimitiveType(targetValue)
+        const isPrimitive = key === 'common.apiSourceBackups' ? Array.isArray(targetValue) && targetValue.every(item => typeof item === 'string') : checkPrimitiveType(targetValue)
         // if (checkPrimitiveType(value)) {
         if (!isPrimitive || targetValue == originSettingCopy[key] || originSettingCopy[key] === undefined) continue
         updatedSettingKeys.push(key)
@@ -43,7 +44,7 @@ const mergeSetting = (originSetting: LX.AppSetting, targetSetting?: Partial<LX.A
     } else {
       for (const key of originSettingKeys as Array<keyof LX.AppSetting>) {
         const targetValue: any = targetSetting[key]
-        const isPrimitive = checkPrimitiveType(targetValue)
+        const isPrimitive = key === 'common.apiSourceBackups' ? Array.isArray(targetValue) && targetValue.every(item => typeof item === 'string') : checkPrimitiveType(targetValue)
         // if (checkPrimitiveType(value)) {
         if (!isPrimitive || targetValue == originSettingCopy[key]) continue
         updatedSettingKeys.push(key)
@@ -55,6 +56,13 @@ const mergeSetting = (originSetting: LX.AppSetting, targetSetting?: Partial<LX.A
         // }
       }
     }
+  }
+
+  const backups = normalizeApiSourceBackups(originSettingCopy['common.apiSource'], originSettingCopy['common.apiSourceBackups'])
+  if (JSON.stringify(backups) !== JSON.stringify(originSettingCopy['common.apiSourceBackups'])) {
+    originSettingCopy['common.apiSourceBackups'] = backups
+    updatedSetting['common.apiSourceBackups'] = backups
+    if (!updatedSettingKeys.includes('common.apiSourceBackups')) updatedSettingKeys.push('common.apiSourceBackups')
   }
 
   return {

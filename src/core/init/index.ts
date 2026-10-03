@@ -1,3 +1,6 @@
+import { initRecommendAdapters } from '@/core/recommend/adapters/init'
+import { initRecommendProfile } from '@/core/recommend/profile'
+import { initRecommendRadio } from '@/core/recommend/session'
 import { initSetting, showPactModal } from '@/core/common'
 import registerPlaybackService from '@/plugins/player/service'
 import initTheme from './theme'
@@ -53,6 +56,9 @@ export default async() => {
 
   registerPlaybackService()
   bootLog('Playback Service Registered.')
+  initRecommendAdapters()
+  initRecommendProfile()
+  initRecommendRadio()
   await initPlayer(setting)
   bootLog('Player inited.')
   await dataInit(setting)

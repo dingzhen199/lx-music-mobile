@@ -1,3 +1,4 @@
+import { recommendEvents } from './adapters/events'
 /**
  * “从此歌出发”探索会话编排（T-B2 薄层）/ 探索电台编排（TT-1）。
  *
@@ -717,22 +718,22 @@ const handleMusicToggled = (reason: LX.Player.MusicChangeReason = 'user'): void 
 
 const subscribeMusicToggled = (): void => {
   if (unsubMusicToggled) return
-  global.app_event.on('musicToggled', handleMusicToggled)
+  recommendEvents.on('musicToggled', handleMusicToggled)
   // TT-4 时长累计的 play/pause/stop 订阅与切歌订阅同生命周期（所有权一致归“电台开关或活跃会话”，
   // 见 endSession）：指标事件全部由切歌/反馈/开收台触发，切歌退订后保留时长订阅只会积累
   // 永不被结算的状态；订阅保留期间的空转成本仅每次事件两次函数调用，可忽略
-  global.app_event.on('play', handlePlayForMetrics)
-  global.app_event.on('pause', handlePauseForMetrics)
-  global.app_event.on('playerError', handlePlaybackInterrupted)
-  global.app_event.on('error', handlePlaybackInterrupted)
-  global.app_event.on('stop', handlePlaybackInterrupted)
+  recommendEvents.on('play', handlePlayForMetrics)
+  recommendEvents.on('pause', handlePauseForMetrics)
+  recommendEvents.on('playerError', handlePlaybackInterrupted)
+  recommendEvents.on('error', handlePlaybackInterrupted)
+  recommendEvents.on('stop', handlePlaybackInterrupted)
   unsubMusicToggled = () => {
-    global.app_event.off('musicToggled', handleMusicToggled)
-    global.app_event.off('play', handlePlayForMetrics)
-    global.app_event.off('pause', handlePauseForMetrics)
-    global.app_event.off('playerError', handlePlaybackInterrupted)
-    global.app_event.off('error', handlePlaybackInterrupted)
-    global.app_event.off('stop', handlePlaybackInterrupted)
+    recommendEvents.off('musicToggled', handleMusicToggled)
+    recommendEvents.off('play', handlePlayForMetrics)
+    recommendEvents.off('pause', handlePauseForMetrics)
+    recommendEvents.off('playerError', handlePlaybackInterrupted)
+    recommendEvents.off('error', handlePlaybackInterrupted)
+    recommendEvents.off('stop', handlePlaybackInterrupted)
     // 退订期间不可观测，重新订阅不能结算旧曲；同 run 重锚仍保留订阅。
     playTime = createPlayTimeState()
     lastSongId = null

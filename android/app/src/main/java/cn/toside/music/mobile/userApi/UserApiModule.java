@@ -10,9 +10,12 @@ import com.facebook.react.bridge.ReactContextBaseJavaModule;
 import com.facebook.react.bridge.ReactMethod;
 import com.facebook.react.bridge.ReadableMap;
 import java.lang.Thread;
+import java.util.HashMap;
+import java.util.Map;
 
 public class UserApiModule extends ReactContextBaseJavaModule {
-  private JavaScriptThread javaScriptThread;
+  private final Map<String, JavaScriptThread> runtimes = new HashMap<>();
+  private final Map<String, String> tokens = new HashMap<>();
   private final ReactApplicationContext reactContext;
   private UtilsEvent utilsEvent;
 
@@ -20,7 +23,6 @@ public class UserApiModule extends ReactContextBaseJavaModule {
 
   UserApiModule(ReactApplicationContext reactContext) {
     super(reactContext);
-    this.javaScriptThread = null;
     this.utilsEvent = null;
     this.reactContext = reactContext;
   }
@@ -50,26 +52,27 @@ public class UserApiModule extends ReactContextBaseJavaModule {
   @ReactMethod
   public void loadScript(ReadableMap data) {
     if (this.utilsEvent == null) this.utilsEvent = new UtilsEvent(this.reactContext);
-    if (this.javaScriptThread != null) destroy();
     Bundle info = Arguments.toBundle(data);
-    this.javaScriptThread = new JavaScriptThread(this.reactContext, info);
-    this.javaScriptThread.prepareHandler(new JsHandler(this.reactContext.getMainLooper(), this.utilsEvent));
-    this.javaScriptThread.getHandler().sendEmptyMessage(HandlerWhat.INIT);
-    this.javaScriptThread.setUncaughtExceptionHandler((thread, ex) -> {
-      Handler jsHandler = javaScriptThread.getHandler();
-      Message message = jsHandler.obtainMessage();
-      message.what = HandlerWhat.LOG;
-      message.obj = new Object[]{"error", "Uncaught exception in JavaScriptThread: " + ex.getMessage()};
-      jsHandler.sendMessage(message);
-      Log.e("JavaScriptThread", "Uncaught exception in JavaScriptThread: " + ex.getMessage());
+    String apiId = info.getString("id");
+    String token = info.getString("token");
+    destroy(apiId);
+    JavaScriptThread runtime = new JavaScriptThread(this.reactContext, info);
+    Handler mainHandler = new JsHandler(this.reactContext.getMainLooper(), this.utilsEvent, apiId, token);
+    runtimes.put(apiId, runtime);
+    tokens.put(apiId, token);
+    runtime.prepareHandler(mainHandler);
+    runtime.setUncaughtExceptionHandler((thread, ex) -> {
+      mainHandler.sendMessage(mainHandler.obtainMessage(HandlerWhat.INIT_FAILED, ex.getMessage()));
+      Log.e("JavaScriptThread", "Uncaught exception: " + ex.getMessage());
     });
+    runtime.getHandler().sendEmptyMessage(HandlerWhat.INIT);
     Log.d("UserApi", "Module Thread id: " + Thread.currentThread().getId());
   }
 
   @ReactMethod
-  public boolean sendAction(String action, String info) {
-    JavaScriptThread javaScriptThread = this.javaScriptThread;
-    if (javaScriptThread == null) return false;
+  public boolean sendAction(String apiId, String token, String action, String info) {
+    JavaScriptThread javaScriptThread = runtimes.get(apiId);
+    if (javaScriptThread == null || !token.equals(tokens.get(apiId))) return false;
     Handler jsHandler = javaScriptThread.getHandler();
     Message message = jsHandler.obtainMessage();
     message.what = HandlerWhat.ACTION;
@@ -79,11 +82,15 @@ public class UserApiModule extends ReactContextBaseJavaModule {
   }
 
   @ReactMethod
-  public void destroy() {
-    JavaScriptThread javaScriptThread = this.javaScriptThread;
-    if (javaScriptThread == null) return;
-    javaScriptThread.getHandler().sendEmptyMessage(HandlerWhat.DESTROY);
-    javaScriptThread.stopThread();
-    this.javaScriptThread = null;
+  public void destroy(String apiId) {
+    if (apiId.isEmpty()) {
+      for (String id : new java.util.ArrayList<>(runtimes.keySet())) destroy(id);
+      return;
+    }
+    JavaScriptThread runtime = runtimes.remove(apiId);
+    tokens.remove(apiId);
+    if (runtime == null) return;
+    runtime.getHandler().sendEmptyMessage(HandlerWhat.DESTROY);
+    runtime.stopThread();
   }
 }

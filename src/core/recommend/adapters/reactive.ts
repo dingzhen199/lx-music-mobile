@@ -1,3 +1,2 @@
-// Framework-independent reactivity keeps the desktop state machine unchanged. No Vue UI runtime.
-export { ref, reactive, computed, watch, effectScope } from '@vue/reactivity'
-export const nextTick = async() => Promise.resolve()
+// Framework-independent scheduler preserves tested radio/profile batching; no DOM renderer.
+export { ref, reactive, computed, watch, effectScope, nextTick } from '@vue/runtime-core'

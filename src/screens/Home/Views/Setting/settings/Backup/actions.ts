@@ -32,6 +32,9 @@ const importOldListData = async(lists: any[]) => {
           source: list.source,
           sourceListId: list.sourceListId,
           locationUpdateTime: list.locationUpdateTime ?? null,
+          cover: list.cover,
+          desc: list.desc,
+          author: list.author,
         }
         allLists.push(listInfo as LX.List.UserListInfoFull)
       }
@@ -50,6 +53,11 @@ const importNewListData = async(lists: Array<LX.List.MyDefaultListInfoFull | LX.
       const targetList = allLists.find(l => l.id == list.id)
       if (targetList) {
         targetList.list = filterMusicList(list.list).map(m => fixNewMusicInfoQuality(m))
+        const target = targetList as LX.List.UserListInfoFull
+        const incoming = list as LX.List.UserListInfoFull
+        if (incoming.cover != null) target.cover = incoming.cover
+        if (incoming.desc != null) target.desc = incoming.desc
+        if (incoming.author != null) target.author = incoming.author
       } else {
         const data = {
           name: list.name,
@@ -58,6 +66,9 @@ const importNewListData = async(lists: Array<LX.List.MyDefaultListInfoFull | LX.
           source: (list as LX.List.UserListInfoFull).source,
           sourceListId: (list as LX.List.UserListInfoFull).sourceListId,
           locationUpdateTime: (list as LX.List.UserListInfoFull).locationUpdateTime ?? null,
+          cover: (list as LX.List.UserListInfoFull).cover,
+          desc: (list as LX.List.UserListInfoFull).desc,
+          author: (list as LX.List.UserListInfoFull).author,
         }
         allLists.push(data as LX.List.UserListInfoFull)
       }
@@ -104,6 +115,9 @@ export const handleImportListPart = async(listData: LX.ConfigFile.MyListInfoPart
     list: userList.list,
     source: userList.source,
     sourceListId: userList.sourceListId,
+    cover: userList.cover,
+    desc: userList.desc,
+    author: userList.author,
     position: Math.max(position, -1),
   }).then(() => {
     toast(global.i18n.t('setting_backup_part_import_list_tip_success'))

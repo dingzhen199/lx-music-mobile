@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { rendererInvoke } from '@common/rendererIpc'
+import { llmTransport as rendererInvoke } from './adapters/llmTransport'
 import { addTempPlayList } from '@/core/recommend/adapters/playerAction'
 import { recallCandidates } from './recall'
 import { exploreOnce } from './engine'
@@ -10,7 +10,7 @@ import * as submission from './submission'
 import type { RecommendLlmParams } from '@/config/recommendation'
 
 vi.mock('@/core/recommend/adapters/setting', () => ({ appSetting: { 'ai.maxConcurrentRequests': 3 } }))
-vi.mock('@common/rendererIpc', () => ({ rendererInvoke: vi.fn() }))
+vi.mock('./adapters/llmTransport', () => ({ llmTransport: vi.fn() }))
 vi.mock('@/core/recommend/adapters/playerAction', () => ({ addTempPlayList: vi.fn() }))
 vi.mock('@/core/recommend/adapters/playerState', () => ({ playMusicInfo: { musicInfo: null }, tempPlayList: [] }))
 vi.mock('@/utils/listManage', () => ({ getListMusics: async() => [] }))
@@ -68,7 +68,7 @@ describe('推荐引擎请求与提交', () => {
   it('3 批同时发起，仅失败批重试；合并保留成功批次并共用 system', async() => {
     const calls = [0, 0, 0]
     const releases: Array<() => void> = []
-    invoke.mockImplementation(async(_event, payload) => {
+    invoke.mockImplementation(async(payload) => {
       const batch = batchIndex(payload as RecommendLlmParams)
       calls[batch]++
       if (batch === 1 && calls[batch] === 1) throw new Error('503 retry')
@@ -78,7 +78,7 @@ describe('推荐引擎请求与提交', () => {
     const result = exploreOnce({ ...options, enqueue: false })
     await vi.advanceTimersByTimeAsync(0)
     expect(calls).toEqual([1, 1, 1])
-    const systems = invoke.mock.calls.map(call => (call[1] as RecommendLlmParams).messages[0].content)
+    const systems = invoke.mock.calls.map(call => (call[0] as RecommendLlmParams).messages[0].content)
     expect(new Set(systems).size).toBe(1)
     expect(systems[0]).not.toContain('Track 0')
     await vi.advanceTimersByTimeAsync(800)
@@ -92,7 +92,7 @@ describe('推荐引擎请求与提交', () => {
   })
 
   it('部分批次耗尽重试仍保留其他 AI 结果', async() => {
-    invoke.mockImplementation(async(_event, payload) => {
+    invoke.mockImplementation(async(payload) => {
       if (batchIndex(payload as RecommendLlmParams) === 1) throw new Error('503 unavailable')
       return ranked
     })
@@ -108,7 +108,7 @@ describe('推荐引擎请求与提交', () => {
 
   it('无效分析重试，不把 raw 文本当作成功分析', async() => {
     let analyses = 0
-    invoke.mockImplementation(async(_event, payload) => {
+    invoke.mockImplementation(async(payload) => {
       const params = payload as RecommendLlmParams
       if (params.messages[0].content.includes('Music Fingerprint + Aesthetic Reading')) {
         analyses++
@@ -182,7 +182,7 @@ describe('推荐引擎请求与提交', () => {
 
   it('部分 AI 批次失败时，本地回退仅使用失败批，不复活成功批的淘汰曲', async() => {
     const row = JSON.parse(ranked.content).ranking[0]
-    invoke.mockImplementation(async(_event, payload) => {
+    invoke.mockImplementation(async(payload) => {
       if (batchIndex(payload as RecommendLlmParams) === 1) throw new Error('503 unavailable')
       return { content: JSON.stringify({ ranking: [{ ...row, confidence: 'low' }] }) }
     })
@@ -215,7 +215,7 @@ describe('推荐引擎请求与提交', () => {
 
   it('续补重新分析旧起点时，不把当前新歌的音频特征和播放位置传给模型', async() => {
     playMusicInfo.musicInfo = { id: 'another', singer: 'Another', name: 'Different', meta: {} } as any
-    invoke.mockImplementation(async(_event, payload) => {
+    invoke.mockImplementation(async(payload) => {
       const params = payload as RecommendLlmParams
       if (params.messages[0].content.includes('Music Fingerprint + Aesthetic Reading')) {
         expect(params.messages[1].content).not.toContain(`音频特征事实单：\n${getFeatureCollector().summary().text}`)

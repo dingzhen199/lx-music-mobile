@@ -190,6 +190,8 @@ android {
 dependencies {
     // The version of react-native is set by the React Native Gradle Plugin
     implementation("com.facebook.react:react-android")
+    // Same pinned Media3 version as TrackPlayer; required by the per-player analyser accessor.
+    implementation("androidx.media3:media3-exoplayer:1.8.0")
     implementation("com.facebook.react:flipper-integration")
     // implementation "androidx.javascriptengine:javascriptengine:1.0.0-alpha07"
     // implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")

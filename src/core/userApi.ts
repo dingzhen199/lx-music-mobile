@@ -1,6 +1,6 @@
 import { action, state } from '@/store/userApi'
 import { addUserApi, getUserApiScript, removeUserApi as removeUserApiFromStore, setUserApiAllowShowUpdateAlert as setUserApiAllowShowUpdateAlertFromStore } from '@/utils/data'
-import { destroy, loadScript } from '@/utils/nativeModules/userApi'
+import { destroy, loadScript, setAllowShowUpdateAlert } from '@/utils/nativeModules/userApi'
 import { log as writeLog } from '@/utils/log'
 import { setUserApiBackups } from './apiSource'
 import settingState from '@/store/setting/state'
@@ -25,7 +25,8 @@ export const setUserApi = async(apiId: string) => {
   }
   if (loading.get(apiId) !== generation) return
   if (!script.trim()) throw new Error('empty api script')
-  loadScript({ ...target, script })
+  const currentTarget = state.list.find(api => api.id === apiId)
+  if (currentTarget) loadScript({ ...currentTarget, script })
 }
 
 export const destroyUserApi = (apiId?: string) => {
@@ -52,28 +53,30 @@ export const setUserApiList: typeof action['setUserApiList'] = (list) => {
   action.setUserApiList(list)
 }
 
-let importQueue: Promise<unknown> = Promise.resolve()
-export const importUserApi = async(script: string) => {
-  const task = importQueue.then(async() => {
-    if (state.list.length >= 20) throw new Error(global.i18n.t('user_api_max_tip'))
-    const info = await addUserApi(script.replace(/^\uFEFF/, '').trimStart())
-    action.addUserApi(info)
-  })
-  importQueue = task.catch(() => {})
-  await task
+let mutationQueue: Promise<void> = Promise.resolve()
+const mutateUserApi = async(task: () => Promise<void>) => {
+  const result = mutationQueue.then(task)
+  mutationQueue = result.catch(() => {})
+  await result
 }
+export const importUserApi = async(script: string) => mutateUserApi(async() => {
+  if (state.list.length >= 20) throw new Error(global.i18n.t('user_api_max_tip'))
+  const info = await addUserApi(script.replace(/^\uFEFF/, '').trimStart())
+  action.addUserApi(info)
+})
 
-export const removeUserApi = async(ids: string[]) => {
+export const removeUserApi = async(ids: string[]) => mutateUserApi(async() => {
   const list = await removeUserApiFromStore(ids)
   action.setUserApiList(list)
   for (const id of ids) destroyUserApi(id)
   setUserApiBackups(settingState.setting['common.apiSourceBackups'].filter(id => !ids.includes(id)))
-}
+})
 
-export const setUserApiAllowShowUpdateAlert = async(id: string, enable: boolean) => {
+export const setUserApiAllowShowUpdateAlert = async(id: string, enable: boolean) => mutateUserApi(async() => {
   await setUserApiAllowShowUpdateAlertFromStore(id, enable)
   action.setUserApiAllowShowUpdateAlert(id, enable)
-}
+  setAllowShowUpdateAlert(id, enable)
+})
 
 export const log = {
   r_info(...params: any[]) {

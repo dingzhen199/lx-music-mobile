@@ -354,6 +354,18 @@ declare global {
       /**
        * 是否启用同步
        */
+      'common.apiSourceBackups': string[]
+      'ai.enable': boolean
+      'ai.audioAnalysisEnabled': boolean
+      'ai.provider': 'openai-compatible' | 'anthropic'
+      'ai.baseUrl': string
+      'ai.apiKey': string
+      'ai.model': string
+      'ai.maxConcurrentRequests': number
+      'recommend.engine': 'platform' | 'ai' | 'local'
+      'recommend.radius': number
+      'recommend.autoRefill': boolean
+      'recommend.radio': boolean
       'sync.enable': boolean
     }
   }

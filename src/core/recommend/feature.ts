@@ -1,13 +1,25 @@
+import type * as NativeAnalyserModule from './adapters/analyser'
+import { appSetting } from './adapters/setting'
+import playerState from '@/store/player/state'
+import { isPlay, playMusicInfo } from './adapters/playerState'
+import { recommendEvents } from './adapters/events'
 /**
  * 音频特征事实单：采样桶构造与摘要的纯逻辑 + 播放器接入的采集器。
  *
  * 思路（来自 from-here 的“特征事实单”要求）：
- * - 从 AnalyserNode 拉取时域/频域 Float32 数据，按 1s 节流构造 AudioBucket；
+ * - 从 AudioAnalyser 拉取时域/频域 Float32 数据，按 1s 节流构造 AudioBucket；
  * - summarizeBuckets 为纯函数，输出人读文本段 + 数值对象，供 LLM 分析的“音频特征事实单”段落；
  * - 特征单只表述粗略信号统计（RMS/频带能量/onset），不确定时标 unknown，不臆断编曲与流派。
  * 本文件的纯函数部分不依赖任何 lx 运行时模块，由 vitest 直接测试；
  * AudioFeatureCollector 通过运行时动态 import 接入播放器插件，保证模块可在测试环境加载。
  */
+
+export interface AudioAnalyser {
+  fftSize: number
+  frequencyBinCount: number
+  getFloatTimeDomainData: (data: Float32Array) => void
+  getFloatFrequencyData: (data: Float32Array) => void
+}
 
 /** 采样桶间隔（毫秒）。 */
 export const BUCKET_INTERVAL_MS = 1000
@@ -173,7 +185,7 @@ export const summarizeBuckets = (buckets: AudioBucket[]): FeatureSheet => {
 // ============================ 播放器接入（生命周期见 featureCollector.test.ts） ============================
 
 /**
- * 从 AnalyserNode 拉取特征的采集器：
+ * 从 AudioAnalyser 拉取特征的采集器：
  * - 1s 节流（interval 触发后仍按 BUCKET_INTERVAL_MS 节流）；
  * - 滚动保留最近 MAX_BUCKETS 桶；
  * - 订阅播放器事件：切歌（musicToggled）清空桶、暂停（pause）停止采样、播放（play）恢复采样。
@@ -186,7 +198,9 @@ export class AudioFeatureCollector {
   private sampling = false
   private timer: ReturnType<typeof setInterval> | null = null
   private lastPullAt = 0
-  private getAnalyserFn: (() => AnalyserNode | null) | null = null
+  private nativePlugin: typeof NativeAnalyserModule | null = null
+  private nativeGeneration = -1
+  private getAnalyserFn: (() => AudioAnalyser | null) | null = null
   private unsubMusicToggled: (() => void) | null = null
   private unsubPlay: (() => void) | null = null
   private unsubPause: (() => void) | null = null
@@ -209,6 +223,23 @@ export class AudioFeatureCollector {
     return summarizeBuckets(this.buckets)
   }
 
+  private async refreshNativeSample(): Promise<void> {
+    const generation = this.generation
+    const plugin = await import('./adapters/analyser')
+    if (generation !== this.generation) return
+    this.nativePlugin = plugin
+    const currentGeneration = playerState.playbackGeneration
+    if (currentGeneration !== this.nativeGeneration) {
+      plugin.releaseAudioAnalysis()
+      this.clear()
+      this.nativeGeneration = currentGeneration
+    }
+    const playing = playMusicInfo.musicInfo
+    const info = playing && ('progress' in playing ? playing.metadata.musicInfo : playing)
+    plugin.configureAudioAnalysis({ enabled: appSetting['ai.audioAnalysisEnabled'] && !appSetting['player.isEnableAudioOffload'], trackId: playerState.resourceMusicId ?? info?.id ?? null, playing: isPlay.value })
+    await plugin.refreshAnalyser()
+  }
+
   async start(): Promise<void> {
     if (this.started) return
     const generation = ++this.generation
@@ -218,7 +249,8 @@ export class AudioFeatureCollector {
     this.buckets = []
     try {
       if (!this.getAnalyserFn) {
-        const plugin = await import('@/core/recommend/adapters/analyser')
+        const plugin = await import('./adapters/analyser')
+        this.nativePlugin = plugin
         this.getAnalyserFn = plugin.getAnalyser
       }
     } catch (err) {
@@ -237,6 +269,8 @@ export class AudioFeatureCollector {
     // eslint-disable-next-line @typescript-eslint/prefer-optional-chain -- 必须保留 typeof 守卫：window 可能未定义（非浏览器环境），可选链不能防 ReferenceError
     if (!global.app_event) return
     const handleMusicToggled = () => {
+      this.nativeGeneration = -1
+      this.nativePlugin?.releaseAudioAnalysis()
       this.clear()
     }
     const handlePlay = () => {
@@ -244,24 +278,29 @@ export class AudioFeatureCollector {
     }
     const handlePause = () => {
       this.sampling = false
+      this.nativePlugin?.releaseAudioAnalysis()
     }
-    global.app_event.on('musicToggled', handleMusicToggled)
-    global.app_event.on('play', handlePlay)
-    global.app_event.on('pause', handlePause)
+    recommendEvents.on('musicToggled', handleMusicToggled)
+    recommendEvents.on('play', handlePlay)
+    recommendEvents.on('pause', handlePause)
+    recommendEvents.on('stop', handlePause)
+    recommendEvents.on('error', handlePause)
     this.unsubMusicToggled = () => {
-      global.app_event.off('musicToggled', handleMusicToggled)
+      recommendEvents.off('musicToggled', handleMusicToggled)
     }
     this.unsubPlay = () => {
-      global.app_event.off('play', handlePlay)
+      recommendEvents.off('play', handlePlay)
     }
     this.unsubPause = () => {
-      global.app_event.off('pause', handlePause)
+      recommendEvents.off('pause', handlePause)
+      recommendEvents.off('stop', handlePause)
+      recommendEvents.off('error', handlePause)
     }
   }
 
   stop(): void {
-    if (!this.started) return
     this.generation++
+    this.nativePlugin?.releaseAudioAnalysis()
     this.started = false
     this.sampling = false
     if (this.timer != null) {
@@ -281,6 +320,9 @@ export class AudioFeatureCollector {
     const now = Date.now()
     if (now - this.lastPullAt < BUCKET_INTERVAL_MS) return
     this.lastPullAt = now
+    const generation = this.generation
+    await this.refreshNativeSample()
+    if (!this.started || !this.sampling || generation !== this.generation) return
     this.sampleNow()
   }
 
@@ -299,7 +341,7 @@ export class AudioFeatureCollector {
   }
 
   /** 安全获取 analyser：播放器插件在未创建 audio 时可能抛错，此处按不可用处理。 */
-  private safeAnalyser(): AnalyserNode | null {
+  private safeAnalyser(): AudioAnalyser | null {
     try {
       return this.getAnalyserFn?.() ?? null
     } catch (err) {
@@ -312,7 +354,8 @@ export class AudioFeatureCollector {
   async sampleOnce(): Promise<FeatureSheet> {
     if (!this.getAnalyserFn) {
       try {
-        const plugin = await import('@/core/recommend/adapters/analyser')
+        const plugin = await import('./adapters/analyser')
+        this.nativePlugin = plugin
         this.getAnalyserFn = plugin.getAnalyser
       } catch (err) {
         console.error('[feature] 加载播放器分析器失败', err)
@@ -320,7 +363,9 @@ export class AudioFeatureCollector {
       }
     }
     this.lastPullAt = Date.now()
+    await this.refreshNativeSample()
     this.sampleNow()
+    if (!this.started) this.nativePlugin?.releaseAudioAnalysis()
     return this.summary()
   }
 }

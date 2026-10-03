@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { explorePlatformOnce } from './platformEngine'
 import { recallPlatformSimilar, type PlatformRecallOptions } from './platformRecall'
 import { SimilarCandidateCache } from './similarCache'
-import { addDislikeInfo, clearDislikeInfo } from '@/store/dislikeList/action'
+import { addDislikeInfo, clearDislikeInfo } from './testRules'
 
 const mocks = vi.hoisted(() => ({
   wySearch: vi.fn(),
@@ -14,7 +14,7 @@ const mocks = vi.hoisted(() => ({
   queue: [] as any[],
 }))
 // Keep normalization, recall, fusion, submission and queue filtering real; replace only I/O boundaries.
-vi.mock('@/utils', async() => import('@common/utils/tools'))
+vi.mock('@/utils', async() => import('@/utils/musicInfo'))
 vi.mock('@/utils/musicSdk', () => ({
   default: {
     wy: { musicSearch: { search: mocks.wySearch }, simiSong: { getSimiSong: mocks.wySimi } },

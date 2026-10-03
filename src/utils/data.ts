@@ -131,19 +131,26 @@ export const saveListUpdateInfo = async(info: LX.List.ListUpdateInfo) => {
   listUpdateInfo = info
   saveListUpdateInfoThrottle()
 }
+let listUpdateWrite: Promise<void> = Promise.resolve()
+const updateListStatus = async(id: string, patch: Partial<LX.List.ListUpdateInfo[string]>) => {
+  const task = listUpdateWrite.then(async() => {
+    await initListUpdateInfo()
+    const next = { ...listUpdateInfo, [id]: { ...(listUpdateInfo[id] ?? { updateTime: 0, isAutoUpdate: true }), ...patch } }
+    await saveData(listUpdateInfoKey, next)
+    // eslint-disable-next-line require-atomic-updates -- This entire read/write/publish sequence is serialized by listUpdateWrite.
+    listUpdateInfo = next
+  })
+  listUpdateWrite = task.catch(() => {})
+  await task
+}
 export const setListAutoUpdate = async(id: string, enable: boolean) => {
-  await initListUpdateInfo()
-  const targetInfo = listUpdateInfo[id] ?? { updateTime: 0, isAutoUpdate: false }
-  targetInfo.isAutoUpdate = enable
-  listUpdateInfo[id] = targetInfo
-  saveListUpdateInfoThrottle()
+  await updateListStatus(id, { isAutoUpdate: enable })
 }
 export const setListUpdateTime = async(id: string, time: number) => {
-  await initListUpdateInfo()
-  const targetInfo = listUpdateInfo[id] ?? { updateTime: 0, isAutoUpdate: false }
-  targetInfo.updateTime = time
-  listUpdateInfo[id] = targetInfo
-  saveListUpdateInfoThrottle()
+  await updateListStatus(id, { updateTime: time })
+}
+export const setListUpdateError = async(id: string, error: string | null) => {
+  await updateListStatus(id, { updateError: error })
 }
 // export const setListUpdateInfo = (id, { updateTime, isAutoUpdate }) => {
 //   listUpdateInfo[id] = { updateTime, isAutoUpdate }
@@ -348,8 +355,17 @@ export const hasMusicUrlByMusic = async(musicInfo: LX.Music.MusicInfo) => {
 export const clearMusicUrlByMusic = async(musicInfo: LX.Music.MusicInfo) => {
   await removeDataMultiple(qualitys.map(q => `${storageDataPrefix.musicUrl}${musicInfo.id}_${q}`))
 }
-export const getMusicUrl = async(musicInfo: LX.Music.MusicInfo, type: LX.Quality) => getData<string>(`${storageDataPrefix.musicUrl}${musicInfo.id}_${type}`).then((url) => url ?? '')
-export const saveMusicUrl = async(musicInfo: LX.Music.MusicInfo, type: LX.Quality, url: string) => saveData(`${storageDataPrefix.musicUrl}${musicInfo.id}_${type}`, url)
+export const getMusicUrlInfo = async(musicInfo: LX.Music.MusicInfo, type: LX.Quality): Promise<{ url: string, musicInfo?: LX.Music.MusicInfoOnline } | null> => {
+  const cached = await getData<unknown>(`${storageDataPrefix.musicUrl}${musicInfo.id}_${type}`)
+  if (typeof cached === 'string') return cached ? { url: cached } : null
+  if (!cached || typeof cached !== 'object' || !('url' in cached) || typeof cached.url !== 'string' || !cached.url) return null
+  const info = 'musicInfo' in cached ? cached.musicInfo as LX.Music.MusicInfoOnline : null
+  const valid = info && typeof info.id === 'string' && typeof info.name === 'string' && typeof info.singer === 'string' &&
+    ['kw', 'kg', 'tx', 'wy', 'mg'].includes(info.source) && info.meta && typeof info.meta === 'object'
+  return { url: cached.url, ...(valid ? { musicInfo: info } : {}) }
+}
+export const getMusicUrl = async(musicInfo: LX.Music.MusicInfo, type: LX.Quality) => (await getMusicUrlInfo(musicInfo, type))?.url ?? ''
+export const saveMusicUrl = async(musicInfo: LX.Music.MusicInfo, type: LX.Quality, url: string, resolvedMusicInfo?: LX.Music.MusicInfoOnline) => saveData(`${storageDataPrefix.musicUrl}${musicInfo.id}_${type}`, resolvedMusicInfo ? { url, musicInfo: resolvedMusicInfo } : url)
 export const clearMusicUrl = async(keys?: string[]) => {
   if (!keys) keys = (await getAllKeys()).filter(key => key.startsWith(storageDataPrefix.musicUrl))
   await removeDataMultiple(keys)
@@ -503,21 +519,28 @@ export const removeSyncHostHistory = async(index: number) => {
 }
 
 let userApis: LX.UserApi.UserApiInfo[] = []
-export const getUserApiList = async(): Promise<LX.UserApi.UserApiInfo[]> => {
-  userApis = await getData<LX.UserApi.UserApiInfo[]>(userApiPrefix) ?? []
+let userApiWrite: Promise<void> = Promise.resolve()
+const withUserApiData = async <T>(task: () => Promise<T>): Promise<T> => {
+  const result = userApiWrite.then(task)
+  userApiWrite = result.then(() => {}, () => {})
+  return result
+}
+export const getUserApiList = async(): Promise<LX.UserApi.UserApiInfo[]> => withUserApiData(async() => {
+  const loaded = await getData<LX.UserApi.UserApiInfo[]>(userApiPrefix) ?? []
 
   // 移除 1.7.1 及之前版本的脚本数据被意外存储到列表中的问题
   let updated = false
-  for (const info of userApis) {
+  for (const info of loaded) {
     if ((info as LX.UserApi.UserApiInfo & { script?: string }).script != null) {
       delete (info as LX.UserApi.UserApiInfo & { script?: string }).script
       updated = true
     }
   }
-  if (updated) void saveData(userApiPrefix, userApis)
+  if (updated) await saveData(userApiPrefix, loaded)
+  userApis = loaded
 
   return [...userApis]
-}
+})
 export const getUserApiScript = async(id: string): Promise<string> => {
   const script = await getData<string>(`${userApiPrefix}${id}`) ?? ''
   return script
@@ -551,7 +574,7 @@ const matchInfo = (scriptInfo: string) => {
 
   return infos as Record<keyof typeof INFO_NAMES, string>
 }
-export const addUserApi = async(script: string): Promise<LX.UserApi.UserApiInfo> => {
+export const addUserApi = async(script: string): Promise<LX.UserApi.UserApiInfo> => withUserApiData(async() => {
   const result = /^\/\*[\S|\s]+?\*\//.exec(script)
   if (!result) throw new Error(global.i18n.t('user_api_add_failed_tip'))
 
@@ -563,30 +586,41 @@ export const addUserApi = async(script: string): Promise<LX.UserApi.UserApiInfo>
     ...scriptInfo,
     allowShowUpdateAlert: true,
   }
-  userApis.push(apiInfo)
-  await saveDataMultiple([
-    [userApiPrefix, userApis],
-    [`${userApiPrefix}${apiInfo.id}`, script],
-  ])
+  const next = [...userApis, apiInfo]
+  await saveData(`${userApiPrefix}${apiInfo.id}`, script)
+  await saveData(userApiPrefix, next)
+  // eslint-disable-next-line require-atomic-updates -- All source mutations execute inside the shared withUserApiData queue.
+  userApis = next
   return apiInfo
-}
-export const removeUserApi = async(ids: string[]) => {
+})
+export const removeUserApi = async(ids: string[]) => withUserApiData(async() => {
   if (!userApis) return []
-  const _ids: string[] = []
-  for (let index = userApis.length - 1; index > -1; index--) {
-    if (ids.includes(userApis[index].id)) {
-      _ids.push(`${userApiPrefix}${userApis[index].id}`)
-      userApis.splice(index, 1)
-      ids.splice(index, 1)
-    }
-  }
-  await saveData(userApiPrefix, userApis)
-  if (_ids.length) await removeDataMultiple(_ids)
+  const removed = new Set(ids)
+  const next = userApis.filter(api => !removed.has(api.id))
+  const keys = userApis.filter(api => removed.has(api.id)).map(api => `${userApiPrefix}${api.id}`)
+  await saveData(userApiPrefix, next)
+  // eslint-disable-next-line require-atomic-updates -- All source mutations execute inside the shared withUserApiData queue.
+  userApis = next
+  if (keys.length) await removeDataMultiple(keys).catch(err => { console.warn('[userApi] orphan script cleanup failed', err) })
   return [...userApis]
+})
+export const setUserApiAllowShowUpdateAlert = async(id: string, enable: boolean) => withUserApiData(async() => {
+  if (!userApis.some(api => api.id === id)) return
+  const next = userApis.map(api => api.id === id ? { ...api, allowShowUpdateAlert: enable } : api)
+  await saveData(userApiPrefix, next)
+  // eslint-disable-next-line require-atomic-updates -- All source mutations execute inside the shared withUserApiData queue.
+  userApis = next
+})
+
+// Recommendation evidence remains local and is never part of settings sync/backups.
+const recommendationWrites = new Map<string, Promise<void>>()
+const saveRecommendation = (key: string, value: unknown): void => {
+  const snapshot = JSON.parse(JSON.stringify(value)) as unknown
+  const pending = (recommendationWrites.get(key) ?? Promise.resolve()).then(async() => saveData(key, snapshot))
+    .catch(err => { console.warn('[recommendation] local persistence failed', key, err) })
+  recommendationWrites.set(key, pending)
 }
-export const setUserApiAllowShowUpdateAlert = async(id: string, enable: boolean) => {
-  const targetApi = userApis?.find(api => api.id == id)
-  if (!targetApi) return
-  targetApi.allowShowUpdateAlert = enable
-  await saveData(userApiPrefix, userApis)
-}
+export const getRecommendMetrics = async() => getData<unknown>('@recommend_metrics')
+export const saveRecommendMetrics = (value: unknown) => { saveRecommendation('@recommend_metrics', value) }
+export const getRecommendProfile = async() => getData<unknown>('@recommend_profile')
+export const saveRecommendProfile = (value: unknown) => { saveRecommendation('@recommend_profile', value) }

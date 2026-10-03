@@ -7,6 +7,7 @@ const partKeyPrefixRxp = /^@___PART___/
 const partKeyArrPrefixRxp = /^@___PART_A___/
 const keySplit = ','
 const limit = 500000
+let writeGeneration = 0
 
 const buildData = (key: string, value: any, datas: Array<[string, string]>) => {
   let valueStr = JSON.stringify(value)
@@ -16,8 +17,9 @@ const buildData = (key: string, value: any, datas: Array<[string, string]>) => {
   }
 
   const partKeys = []
-  for (let i = 0, len = Math.floor(valueStr.length / limit); i <= len; i++) {
-    let partKey = `${partKeyArrPrefix}${key}${i}`
+  const generation = `${Date.now()}_${++writeGeneration}_${Math.random().toString(36).slice(2)}`
+  for (let i = 0, len = Math.ceil(valueStr.length / limit); i < len; i++) {
+    const partKey = `${partKeyArrPrefix}${key}:${generation}:${i}`
     partKeys.push(partKey)
     datas.push([partKey, valueStr.substring(i * limit, (i + 1) * limit)])
   }
@@ -43,15 +45,39 @@ const handleGetData = async<T>(partKeys: string): Promise<T> => {
   })
 }
 
-export const saveData = async(key: string, value: any) => {
-  const datas: Array<[string, string]> = []
-  buildData(key, value, datas)
+const getPartKeys = (value: string | null): string[] => {
+  if (!value) return []
+  if (partKeyPrefixRxp.test(value)) return value.replace(partKeyPrefixRxp, '').split(keySplit)
+  if (partKeyArrPrefixRxp.test(value)) return JSON.parse(value.replace(partKeyArrPrefixRxp, '')) as string[]
+  return []
+}
 
+const writeData = async(values: Array<[string, any]>) => {
+  if (!values.length) return
+  const keys = new Set(values.map(([key]) => key))
+  const previous = await AsyncStorage.multiGet([...keys])
+  const retired = previous.flatMap(([, value]) => getPartKeys(value))
+  const data: Array<[string, string]> = []
+  for (const [key, value] of values) buildData(key, value, data)
+  const chunks = data.filter(([key]) => !keys.has(key))
+  const roots = data.filter(([key]) => keys.has(key))
+  // New generations never overwrite chunks reachable from the old root pointer.
+  if (chunks.length) await AsyncStorage.multiSet(chunks)
+  await AsyncStorage.multiSet(roots)
+  // Cleanup is after commit and best-effort: callers must publish a committed write.
+  if (retired.length) {
+    try {
+      await AsyncStorage.multiRemove(retired)
+    } catch (error: any) {
+      log.error('storage error[cleanup]:', error.message)
+    }
+  }
+}
+
+export const saveData = async(key: string, value: any) => {
   try {
-    await removeData(key)
-    await AsyncStorage.multiSet(datas)
+    await writeData([[key, value]])
   } catch (e: any) {
-    // saving error
     log.error('storage error[saveData]:', key, e.message)
     throw e
   }
@@ -155,15 +181,9 @@ export const getDataMultiple = async<T extends readonly string[]>(keys: T) => {
 }
 
 export const saveDataMultiple = async(datas: Array<[string, any]>) => {
-  const allData: Array<[string, string]> = []
-  for (const [key, value] of datas) {
-    buildData(key, value, allData)
-  }
   try {
-    await removeDataMultiple(datas.map(k => k[0]))
-    await AsyncStorage.multiSet(allData)
+    await writeData(datas)
   } catch (e: any) {
-    // save error
     log.error('storage error[saveDataMultiple]:', e.message)
     throw e
   }
