@@ -1,12 +1,14 @@
 import { NativeEventEmitter, NativeModules } from 'react-native'
+import { createRuntimeRegistry } from '@/core/userApiRuntime'
 
 const { UserApiModule } = NativeModules
 
-let loadScriptInfo: LX.UserApi.UserApiInfo | null = null
+const runtimes = createRuntimeRegistry<LX.UserApi.UserApiInfo>()
 export const loadScript = (info: LX.UserApi.UserApiInfo & { script: string }) => {
-  loadScriptInfo = info
+  const token = runtimes.load(info.id, info)
   UserApiModule.loadScript({
     id: info.id,
+    token,
     name: info.name,
     description: info.description,
     version: info.version ?? '',
@@ -30,8 +32,10 @@ export interface SendActions {
   request: LX.UserApi.UserApiRequestParams
   response: SendResponseParams
 }
-export const sendAction = <T extends keyof SendActions>(action: T, data: SendActions[T]) => {
-  UserApiModule.sendAction(action, JSON.stringify(data))
+export const sendAction = <T extends keyof SendActions>(action: T, data: SendActions[T], apiId: string, token?: string) => {
+  const currentToken = runtimes.token(apiId)
+  if (!currentToken || (token != null && token !== currentToken)) return
+  UserApiModule.sendAction(apiId, currentToken, action, JSON.stringify(data))
 }
 
 // export const clearAppCache = CacheModule.clearAppCache as () => Promise<void>
@@ -74,12 +78,14 @@ export interface Actions {
   showUpdateAlert: UpdateInfoParams
   log: string
 }
-export type ActionsEvent = { [K in keyof Actions]: { action: K, data: Actions[K] } }[keyof Actions]
+export type ActionsEvent = { [K in keyof Actions]: { action: K, data: Actions[K], apiId: string, token: string } }[keyof Actions]
 
 export const onScriptAction = (handler: (event: ActionsEvent) => void): () => void => {
   // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
   const eventEmitter = new NativeEventEmitter(UserApiModule)
   const eventListener = eventEmitter.addListener('api-action', event => {
+    const loadScriptInfo = runtimes.get(event.apiId, event.token)
+    if (!loadScriptInfo) return
     if (event.data) event.data = JSON.parse(event.data as string)
     if (event.action == 'init') {
       if (event.data.info) event.data.info = { ...loadScriptInfo, ...event.data.info }
@@ -95,6 +101,9 @@ export const onScriptAction = (handler: (event: ActionsEvent) => void): () => vo
   }
 }
 
-export const destroy = () => {
-  UserApiModule.destroy()
+export const destroy = (apiId?: string) => {
+  if (apiId) runtimes.remove(apiId)
+  else runtimes.clear()
+  UserApiModule.destroy(apiId ?? '')
 }
+

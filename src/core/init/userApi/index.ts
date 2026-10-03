@@ -1,6 +1,7 @@
 import { type InitParams, onScriptAction, sendAction, type ResponseParams, type UpdateInfoParams, type RequestParams } from '@/utils/nativeModules/userApi'
 import { log, setUserApiList, setUserApiStatus } from '@/core/userApi'
 import settingState from '@/store/setting/state'
+import { state, action } from '@/store/userApi'
 import BackgroundTimer from 'react-native-background-timer'
 import { fetchData } from './request'
 import { getUserApiList } from '@/utils/data'
@@ -17,7 +18,8 @@ export default async(setting: LX.AppSetting) => {
     scriptRequestMap.delete(requestKey)
     target.abort()
   }
-  const sendScriptRequest = (requestKey: string, url: string, options: RequestParams['options']) => {
+  const sendScriptRequest = (requestKey: string, url: string, options: RequestParams['options'], apiId: string, token: string) => {
+    const mapKey = `${apiId}:${token}:${requestKey}`
     let req = fetchData(url, options)
     req.request.then(response => {
       // console.log(response)
@@ -25,19 +27,19 @@ export default async(setting: LX.AppSetting) => {
         error: null,
         requestKey,
         response,
-      })
+      }, apiId, token)
     }).catch(err => {
       sendAction('response', {
         error: err.message,
         requestKey,
         response: null,
-      })
+      }, apiId, token)
     }).finally(() => {
-      scriptRequestMap.delete(requestKey)
+      scriptRequestMap.delete(mapKey)
     })
-    scriptRequestMap.set(requestKey, req)
+    scriptRequestMap.set(mapKey, req)
   }
-  const sendUserApiRequest = async(data: LX.UserApi.UserApiRequestParams) => {
+  const sendUserApiRequest = async(data: LX.UserApi.UserApiRequestParams, apiId: string, token: string) => {
     const handleApiUpdate = () => {
       const target = userApiRequestMap.get(data.requestKey)
       if (!target) return
@@ -56,7 +58,7 @@ export default async(setting: LX.AppSetting) => {
           target.reject(new Error('request timeout'))
         }, 20_000),
       })
-      sendAction('request', data)
+      sendAction('request', data, apiId, token)
     }).finally(() => {
       global.state_event.off('apiSourceUpdated', handleApiUpdate)
     })
@@ -71,10 +73,14 @@ export default async(setting: LX.AppSetting) => {
     if (status) target.resolve(result)
     else target.reject(new Error(errorMessage ?? 'failed'))
   }
-  const handleStateChange = ({ status, errorMessage, info }: InitParams) => {
+  const handleStateChange = ({ status, errorMessage, info }: InitParams, apiId: string, token: string) => {
     // console.log(status, message, info)
-    setUserApiStatus(status, errorMessage)
-    if (!info || info.id !== settingState.setting['common.apiSource']) return
+    if (!info || info.id !== apiId) return
+    const isPrimary = apiId === settingState.setting['common.apiSource']
+    action.setApiStatus(apiId, status, errorMessage)
+    if (isPrimary) setUserApiStatus(status, errorMessage)
+    delete state.apis[apiId]
+    delete state.qualityLists[apiId]
     if (status) {
       if (info.sources) {
         let apis: any = {}
@@ -102,7 +108,7 @@ export default async(setting: LX.AppSetting) => {
                         },
                       },
                       // eslint-disable-next-line @typescript-eslint/promise-function-async
-                    }).then(res => {
+                    }, apiId, token).then(res => {
                       // console.log(res)
                       return { type, url: res.data.url }
                     }).catch(err => {
@@ -130,7 +136,7 @@ export default async(setting: LX.AppSetting) => {
                         },
                       },
                       // eslint-disable-next-line @typescript-eslint/promise-function-async
-                    }).then(res => {
+                    }, apiId, token).then(res => {
                       // console.log(res)
                       return res.data
                     }).catch(async err => {
@@ -158,7 +164,7 @@ export default async(setting: LX.AppSetting) => {
                         },
                       },
                       // eslint-disable-next-line @typescript-eslint/promise-function-async
-                    }).then(res => {
+                    }, apiId, token).then(res => {
                       // console.log(res)
                       return res.data
                     }).catch(async err => {
@@ -174,12 +180,15 @@ export default async(setting: LX.AppSetting) => {
           }
           qualitys[source as LX.Source] = sourceQualitys
         }
-        global.lx.qualityList = qualitys
-        global.lx.apis = apis
-        global.state_event.apiSourceUpdated(settingState.setting['common.apiSource'])
+        state.qualityLists[apiId] = qualitys
+        state.apis[apiId] = apis
+        if (isPrimary) {
+          global.lx.qualityList = qualitys
+          global.lx.apis = apis
+        }
       }
     } else {
-      if (errorMessage) {
+      if (isPrimary && errorMessage) {
         void tipDialog({
           message: `${global.i18n.t('user_api__init_failed_alert', { name: info.name })}\n${errorMessage}`,
           // selection: true,
@@ -187,7 +196,7 @@ export default async(setting: LX.AppSetting) => {
         })
       }
     }
-    if (!global.lx.apiInitPromise[1]) global.lx.apiInitPromise[2](status)
+    if (isPrimary) global.lx.apiInitPromise[2](status)
   }
   const showUpdateAlert = ({ name, log, updateUrl }: UpdateInfoParams) => {
     if (updateUrl) {
@@ -217,16 +226,16 @@ export default async(setting: LX.AppSetting) => {
     switch (event.action) {
       case 'init':
         if ((event as unknown as { errorMessage?: string }).errorMessage) event.data.errorMessage = (event as unknown as { errorMessage: string }).errorMessage
-        handleStateChange(event.data)
+        handleStateChange(event.data, event.apiId, event.token)
         break
       case 'response':
         handleUserApiResponse(event.data)
         break
       case 'request':
-        sendScriptRequest(event.data.requestKey, event.data.url, event.data.options)
+        sendScriptRequest(event.data.requestKey, event.data.url, event.data.options, event.apiId, event.token)
         break
       case 'cancelRequest':
-        cancelRequest(event.data, 'request canceled')
+        cancelRequest(`${event.apiId}:${event.token}:${event.data}`, 'request canceled')
         break
       case 'showUpdateAlert':
         showUpdateAlert(event.data)

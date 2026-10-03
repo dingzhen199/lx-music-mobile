@@ -31,7 +31,7 @@ export default ({ btnStyle }: BtnProps) => {
   type DorpDownMenuProps = _DorpDownMenuProps<typeof importTypes>
 
   const handleAction: DorpDownMenuProps['onPress'] = ({ action }) => {
-    if (state.list.length > 20) {
+    if (state.list.length >= 20) {
       void tipDialog({
         message: t('user_api_max_tip'),
         btnText: t('ok'),

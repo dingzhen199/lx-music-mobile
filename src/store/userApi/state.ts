@@ -5,7 +5,9 @@ interface InitState {
     status: boolean
     message?: string
   }
-  apis: Partial<LX.UserApi.UserApiSources>
+  apis: Record<string, Partial<LX.UserApi.UserApiSources>>
+  qualityLists: Record<string, LX.QualityList>
+  statuses: Record<string, { status: boolean, message?: string }>
 }
 const state: InitState = {
   list: [],
@@ -14,6 +16,8 @@ const state: InitState = {
     message: 'initing',
   },
   apis: {},
+  qualityLists: {},
+  statuses: {},
 }
 
 

@@ -2,20 +2,45 @@ import { action, state } from '@/store/userApi'
 import { addUserApi, getUserApiScript, removeUserApi as removeUserApiFromStore, setUserApiAllowShowUpdateAlert as setUserApiAllowShowUpdateAlertFromStore } from '@/utils/data'
 import { destroy, loadScript } from '@/utils/nativeModules/userApi'
 import { log as writeLog } from '@/utils/log'
+import { setUserApiBackups } from './apiSource'
+import settingState from '@/store/setting/state'
 
+
+const loading = new Map<string, symbol>()
 
 export const setUserApi = async(apiId: string) => {
-  global.lx.qualityList = {}
-  setUserApiStatus(false, 'initing')
-
+  const generation = Symbol(apiId)
+  loading.set(apiId, generation)
+  delete state.apis[apiId]
+  delete state.qualityLists[apiId]
+  action.setApiStatus(apiId, false, 'initing')
   const target = state.list.find(api => api.id === apiId)
   if (!target) throw new Error('api not found')
-  const script = await getUserApiScript(target.id)
+  let script: string
+  try {
+    script = await getUserApiScript(target.id)
+  } catch (err) {
+    if (loading.get(apiId) !== generation) return
+    throw err
+  }
+  if (loading.get(apiId) !== generation) return
+  if (!script.trim()) throw new Error('empty api script')
   loadScript({ ...target, script })
 }
 
-export const destroyUserApi = () => {
-  destroy()
+export const destroyUserApi = (apiId?: string) => {
+  if (apiId) {
+    loading.delete(apiId)
+    delete state.apis[apiId]
+    delete state.qualityLists[apiId]
+    delete state.statuses[apiId]
+  } else {
+    loading.clear()
+    state.apis = {}
+    state.qualityLists = {}
+    state.statuses = {}
+  }
+  destroy(apiId)
 }
 
 
@@ -27,14 +52,22 @@ export const setUserApiList: typeof action['setUserApiList'] = (list) => {
   action.setUserApiList(list)
 }
 
+let importQueue: Promise<unknown> = Promise.resolve()
 export const importUserApi = async(script: string) => {
-  const info = await addUserApi(script)
-  action.addUserApi(info)
+  const task = importQueue.then(async() => {
+    if (state.list.length >= 20) throw new Error(global.i18n.t('user_api_max_tip'))
+    const info = await addUserApi(script.replace(/^\uFEFF/, '').trimStart())
+    action.addUserApi(info)
+  })
+  importQueue = task.catch(() => {})
+  await task
 }
 
 export const removeUserApi = async(ids: string[]) => {
   const list = await removeUserApiFromStore(ids)
   action.setUserApiList(list)
+  for (const id of ids) destroyUserApi(id)
+  setUserApiBackups(settingState.setting['common.apiSourceBackups'].filter(id => !ids.includes(id)))
 }
 
 export const setUserApiAllowShowUpdateAlert = async(id: string, enable: boolean) => {

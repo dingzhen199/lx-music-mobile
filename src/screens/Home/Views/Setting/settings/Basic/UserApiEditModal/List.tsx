@@ -1,7 +1,7 @@
 import { useCallback } from 'react'
 import Text from '@/components/common/Text'
 import { View, TouchableOpacity, ScrollView } from 'react-native'
-import { confirmDialog, createStyle } from '@/utils/tools'
+import { confirmDialog, createStyle, toast } from '@/utils/tools'
 import { useTheme } from '@/store/theme/hook'
 import { useI18n } from '@/lang'
 import { useUserApiList, state as userApiState } from '@/store/userApi'
@@ -87,13 +87,13 @@ export default () => {
       bgClose: false,
     })
     if (!confirm) return
-    void removeUserApi([id]).finally(() => {
+    void removeUserApi([id]).then(() => {
       if (settingState.setting['common.apiSource'] == id) {
         let backApiId = apiSourceInfo.find(api => !api.disabled)?.id
         if (!backApiId) backApiId = userApiState.list[0]?.id
         setApiSource(backApiId ?? '')
       }
-    })
+    }).catch((error: Error) => { toast(error.message, 'long') })
   }, [])
   const handleChangeAllowShowUpdateAlert = useCallback((id: string, enabled: boolean) => {
     void setUserApiAllowShowUpdateAlert(id, enabled)

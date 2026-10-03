@@ -1,11 +1,10 @@
+import { updateListMusics } from '@/core/list'
+import settingState from '@/store/setting/state'
 import {
   saveLyric,
   saveMusicUrl,
-  getMusicUrl as getStoreMusicUrl,
+  getMusicUrlInfo,
 } from '@/utils/data'
-import { updateListMusics } from '@/core/list'
-import settingState from '@/store/setting/state'
-
 import {
   buildLyricInfo,
   getPlayQuality,
@@ -39,12 +38,16 @@ export const setPic = (datas: {
  */
 
 
-export const getMusicUrl = async({ musicInfo, quality, isRefresh, allowToggleSource = true, onToggleSource = () => {} }: {
+export const getMusicUrl = async({ musicInfo, quality, isRefresh, allowToggleSource = true, onResolvedMusicInfo, onToggleSource = () => {}, onToggleApiSource, alternativeMusicInfos }: {
   musicInfo: LX.Music.MusicInfoOnline
   quality?: LX.Quality
   isRefresh: boolean
   allowToggleSource?: boolean
+  alternativeMusicInfos?: LX.Music.MusicInfoOnline[]
+  /** 只报告实际取流条目；播放状态和歌单写回由播放器提交。 */
+  onResolvedMusicInfo?: (musicInfo: LX.Music.MusicInfoOnline) => void
   onToggleSource?: (musicInfo?: LX.Music.MusicInfoOnline) => void
+  onToggleApiSource?: () => void
 }): Promise<string> => {
   // if (!musicInfo._types[type]) {
   //   // 兼容旧版酷我源搜索列表过滤128k音质的bug
@@ -53,12 +56,19 @@ export const getMusicUrl = async({ musicInfo, quality, isRefresh, allowToggleSou
   //   // return Promise.reject(new Error('该歌曲没有可播放的音频'))
   // }
   const targetQuality = quality ?? getPlayQuality(settingState.setting['player.playQuality'], musicInfo)
-  const cachedUrl = await getStoreMusicUrl(musicInfo, targetQuality)
-  if (cachedUrl && !isRefresh) return cachedUrl
+  const cached = isRefresh ? null : await getMusicUrlInfo(musicInfo, targetQuality)
+  // 旧 URL 缓存可能属于别的平台；来源不明时重新取流，不能谎报为原条目。
+  if (cached?.musicInfo && (allowToggleSource || cached.musicInfo.id === musicInfo.id)) {
+    onResolvedMusicInfo?.(cached.musicInfo)
+    return cached.url
+  }
 
-  return handleGetOnlineMusicUrl({ musicInfo, quality, onToggleSource, isRefresh, allowToggleSource }).then(({ url, quality: targetQuality, musicInfo: targetMusicInfo, isFromCache }) => {
-    if (targetMusicInfo.id != musicInfo.id && !isFromCache) void saveMusicUrl(targetMusicInfo, targetQuality, url)
-    void saveMusicUrl(musicInfo, targetQuality, url)
+  return handleGetOnlineMusicUrl({ musicInfo, quality, onToggleSource, onToggleApiSource, isRefresh, allowToggleSource, alternativeMusicInfos }).then(async({ url, quality: targetQuality, musicInfo: targetMusicInfo, isFromCache }) => {
+    const saves = [saveMusicUrl(musicInfo, targetQuality, url, targetMusicInfo)]
+    if (targetMusicInfo.id != musicInfo.id && !isFromCache) saves.push(saveMusicUrl(targetMusicInfo, targetQuality, url, targetMusicInfo))
+    // 预加载完成后正式播放即可读取完整结果；写缓存失败仍允许播放有效地址。
+    await Promise.all(saves).catch(err => { console.warn('[music] 缓存取流结果失败', err) })
+    onResolvedMusicInfo?.(targetMusicInfo)
     return url
   })
 }

@@ -8,10 +8,12 @@ import {
 } from './online'
 import { buildLyricInfo, getCachedLyricInfo } from './utils'
 
-export const getMusicUrl = async({ musicInfo, isRefresh, allowToggleSource = true, onToggleSource = () => {} }: {
+export const getMusicUrl = async({ musicInfo, isRefresh, allowToggleSource = true, onResolvedMusicInfo, onToggleApiSource, onToggleSource = () => {} }: {
   musicInfo: LX.Download.ListItem
   isRefresh: boolean
   onToggleSource?: (musicInfo?: LX.Music.MusicInfoOnline) => void
+  onResolvedMusicInfo?: (musicInfo: LX.Music.MusicInfoOnline) => void
+  onToggleApiSource?: () => void
   allowToggleSource?: boolean
 }): Promise<string> => {
   // if (!isRefresh) {
@@ -19,7 +21,7 @@ export const getMusicUrl = async({ musicInfo, isRefresh, allowToggleSource = tru
   //   if (path) return path
   // }
 
-  return getOnlineMusicUrl({ musicInfo: musicInfo.metadata.musicInfo, isRefresh, onToggleSource, allowToggleSource })
+  return getOnlineMusicUrl({ musicInfo: musicInfo.metadata.musicInfo, isRefresh, onToggleSource, onToggleApiSource, allowToggleSource, onResolvedMusicInfo })
 }
 
 export const getPicUrl = async({ musicInfo, isRefresh, listId, onToggleSource = () => {} }: {

@@ -27,3 +27,13 @@ export const useUserApiList = () => {
 
   return value
 }
+
+export const useApiStatuses = () => {
+  const [value, update] = useState({ ...state.statuses })
+  useEffect(() => {
+    const changed = () => { update({ ...state.statuses }) }
+    event.on('runtimes_changed', changed)
+    return () => { event.off('runtimes_changed', changed) }
+  }, [])
+  return value
+}

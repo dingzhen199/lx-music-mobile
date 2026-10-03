@@ -6,6 +6,10 @@ class UserApiEvent extends Event {
     this.emit('status_changed', status)
   }
 
+  runtimes_changed() {
+    this.emit('runtimes_changed')
+  }
+
   list_changed(list: LX.UserApi.UserApiInfo[]) {
     this.emit('list_changed', list)
   }

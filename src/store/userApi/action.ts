@@ -30,3 +30,8 @@ export const setUserApiAllowShowUpdateAlert = (id: string, enable: boolean) => {
 
   event.list_changed([...state.list])
 }
+
+export const setApiStatus = (id: string, status: boolean, message?: string) => {
+  state.statuses[id] = { status, message }
+  event.runtimes_changed()
+}
