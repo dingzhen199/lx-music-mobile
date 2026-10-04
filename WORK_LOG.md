@@ -68,3 +68,6 @@ Existing build-test CI now also triggers only this feature branch on push, adds 
 - This final documentation update changes no runtime/test/build input
 - Publication target verified: connected GitHub dingzhen199 (206642280), dingzhen199/lx-music-mobile, new feat/desktop-parity-20261003; remote branch absent and repository push permission confirmed
 - Native/device and remote CI status are separate. CI must be observed on the exact published commit; no merge/release/force update is authorized
+
+### Initial publication attempt blocked
+After identity verification, the connected GitHub integration rejected the first Git Data blob write to dingzhen199/lx-music-mobile with HTTP 403 `Resource not accessible by integration`. Repository metadata reports the user's admin/push rights, but that does not establish the integration's actual write permission. No remote branch/commit/ref was created by this attempt and no CI run was triggered. Publication is paused for access repair; no alternate write route or force update was attempted. This is an authorization blocker, not a code/build failure.

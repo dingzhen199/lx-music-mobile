@@ -43,3 +43,5 @@ Review-repair candidate: full 57-suite / 811-test host run and full tsc pass; or
 Fresh independent feature and source/runtime reviews rechecked prior findings and full relevant paths at source commit `65a7832d523366ae796a2afa72f2e063fbb1a757`; no new blocker/critical/major/minor finding was confirmed. The source commit passed the final production Android Metro bundle (exit 0, 8 assets). A subsequent documentation-only commit records this evidence; runtime/test/build inputs are unchanged.
 
 CI statements above are a pre-publication record. The branch's exact published SHA and its Actions result remain authoritative for remote compilation; no local native/device result is implied. No merge or release is included.
+
+Initial publication was blocked by the connected GitHub integration returning HTTP 403 on its first blob write. No feature ref or CI run was created at that attempt. Remote native compilation therefore remains unverified until repository write access is repaired and the branch is published. This access result does not invalidate the completed host checks.
