@@ -27,6 +27,6 @@ Currently available SDK routes: tx/wy/kg artist, kw/kg/mg album. Other provider/
 
 ## Verification boundaries and size
 
-New host tests cover preferred URL/cache behavior, real manual handler identity, real player FIFO/URL commit, completed-download file-first behavior, provider paging, controller cancellation and rendered React controls with native hosts mocked. No live provider availability, Android rendering/accessibility/touch hit area or real device playback claim is made. Fresh independent review and final Metro are required after these additions.
+New host tests cover preferred URL/cache behavior, real manual handler identity, real player FIFO/URL commit, completed-download file-first behavior, provider paging, controller cancellation and rendered React controls with native hosts mocked. No live provider availability, Android rendering/accessibility/touch hit area or real device playback claim is made. Fresh independent review closed the prior major findings; final source a42c560 passed host checks and production Metro. Exact review and validation evidence is in validation.md; native/device gates remain open.
 
 Most added lines are reusable catalog SDK/adapters/controllers, two small RN views, three-language labels and regression fixtures. Existing queue/store/selection machinery is reused; the old automatic-writeback module/tests are removed. No new queue engine, storage layer or package dependency was added. ADRs remain untouched.
