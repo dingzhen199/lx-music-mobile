@@ -3,12 +3,12 @@
 ## Pinned inputs
 Mobile master `fb8480728d875fa5e0da25eebd3a26bb71723aae`; desktop master `ad95d5091c9ed689fa72b5e5c849df65f5a679ce`; desktop feature `df3e97915d40bd7b9efceb8421a120637b0c4617`.
 
-## Evidence as of current implementation pass
+## Host evidence recorded before publication
 
 1. Portable algorithms and mocked orchestration: 52 suites / 790 tests passed (pre-review final). Includes ranking, identity, cancellation, radio/profile, source readiness and storage failure scenarios. No live music/LLM account requests were made
 2. Real JavaScript event/store/storage boundary: `nativeBridge.test.ts` uses actual AppEvent/StateEvent, player store mutations and adapter subscriptions. It checks same-tick A→B→A identity reset, queue metadata, old UI asynchronous delivery, exception isolation, synchronous unsubscribe and deferred duration generation rejection. `recommendationData.test.ts` verifies ordered snapshots and recovery from rejected writes. Storage tests use controlled AsyncStorage I/O, not a real Android database
 3. Full TypeScript check passed again after all source changes with `tsc --noEmit`. Exact Git dependencies were materialized from their pinned upstream source archives and their declaration build run separately; no recursive Git prepare or native build scripts executed
-4. Android production Metro JavaScript bundle passed once with one worker and a 512 MB Node heap, producing a 2.9 MB bundle and 8 assets. A temporary external watch folder was needed for isolated dependency materialization. Small subsequent callback/preload/settings fixes require a final bundle recheck if resources allow
+4. Android production Metro JavaScript bundle passed once with one worker and a 512 MB Node heap, producing a 2.9 MB bundle and 8 assets. A temporary external watch folder was needed for isolated dependency materialization. The final source commit 65a7832d523366ae796a2afa72f2e063fbb1a757 was bundled again successfully with the same one-worker/512 MB limit
 5. One-shot full ESLint hit the 512 MB V8 heap limit; log preserved. The identical repository rules then passed across serialized bounded groups covering all 713 JS/TS input files (including ignored-path notices), followed by corrected/changed-file rechecks. No global lint rule was disabled
 6. Java available; Android SDK/ANDROID_HOME and adb not available. Android Java/Kotlin/Gradle build, install, native bridge execution, UI layout and real-device lifecycle tests NOT RUN. No iOS delivery claim
 
@@ -37,3 +37,9 @@ The feature-push CI path will run the normal unit/type/lint/Metro checks and a s
 The repaired UI minors are exercised by real React component rendering with mocked native host controls: immutable batch headers are visible and platform batches omit misleading radius/instruction; the default-radius button calls the persistent setting writer and never the active-session mutation. These are component/service-boundary tests, not native visual or device validation. `react-test-renderer` is a development-only dependency matching React 18.2.
 
 Review-repair candidate: full 57-suite / 811-test host run and full tsc pass; original-rule lint coverage is current for all 718 JS/TS inputs with zero missing/stale/error records. This supersedes the earlier host test counts without changing the native/device limitations above.
+
+## Final source review/host gate
+
+Fresh independent feature and source/runtime reviews rechecked prior findings and full relevant paths at source commit `65a7832d523366ae796a2afa72f2e063fbb1a757`; no new blocker/critical/major/minor finding was confirmed. The source commit passed the final production Android Metro bundle (exit 0, 8 assets). A subsequent documentation-only commit records this evidence; runtime/test/build inputs are unchanged.
+
+CI statements above are a pre-publication record. The branch's exact published SHA and its Actions result remain authoritative for remote compilation; no local native/device result is implied. No merge or release is included.
