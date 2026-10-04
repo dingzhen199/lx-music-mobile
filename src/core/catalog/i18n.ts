@@ -1,4 +1,5 @@
 const fallback = {
+  catalog_album: '专辑',
   catalog_artist_songs: '艺人歌曲',
   catalog_album_songs: '专辑歌曲',
   catalog_unsupported: '当前提供方暂不支持此目录',

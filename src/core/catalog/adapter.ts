@@ -26,7 +26,7 @@ export const createCatalogAdapter = (providers: CatalogProviders) => ({
     }
     if (kind === 'album') {
       if (!validId(metadata.albumId)) throw new CatalogError('metadata', catalogText('catalog_album_missing'))
-      return [{ kind, source: music.source, id: metadata.albumId, name: metadata.albumName || music.meta.albumName || '专辑' }]
+      return [{ kind, source: music.source, id: metadata.albumId, name: metadata.albumName || music.meta.albumName || catalogText('catalog_album') }]
     }
     const seen = new Set<string>()
     const artists = metadata.artists?.filter(artist => {

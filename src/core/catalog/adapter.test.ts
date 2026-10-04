@@ -75,3 +75,14 @@ describe('ID-based catalog adapter', () => {
     await expect(adapter.load(target, 0)).rejects.toMatchObject({ code: 'metadata' })
   })
 })
+
+it('uses the active English album label when an exact album ID has no name', async() => {
+  const english = await import('@/lang/en-us.json')
+  vi.stubGlobal('i18n', { t: (key: string) => english.default[key as keyof typeof english.default] })
+  try {
+    const track = music()
+    track.meta.albumName = ''
+    const adapter = createCatalogAdapter({ wy: { album: async() => ({ list: [] }) } })
+    await expect(adapter.resolve('album', track)).resolves.toEqual([{ kind: 'album', source: 'wy', id: 8, name: 'Album' }])
+  } finally { vi.unstubAllGlobals() }
+})
