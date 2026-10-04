@@ -3,7 +3,7 @@ import { act, create, type ReactTestRenderer } from 'react-test-renderer'
 import { StateEvent } from '@/event/stateEvent'
 const mocks = vi.hoisted(() => ({ next: vi.fn(), resolve: vi.fn(), load: vi.fn(), play: vi.fn() }))
 vi.mock('@/lang', () => ({ useI18n: () => (key: string) => ({ playback_queue: '当前播放队列', catalog_artist_action: '查看艺人全部歌曲', catalog_album_action: '查看专辑全部歌曲' }[key] ?? key) }))
-vi.mock('react-native', () => ({ View: 'View', Modal: 'Modal', Pressable: 'button', ScrollView: 'ScrollView' }))
+vi.mock('react-native', () => ({ View: 'View', Modal: 'Modal', Pressable: 'button', ScrollView: 'ScrollView', FlatList: 'FlatList' }))
 vi.mock('@/components/common/Text', () => ({ default: 'span' }))
 vi.mock('@/store/theme/hook', () => ({ useTheme: () => ({ 'c-content-background': '#fff' }) }))
 vi.mock('@/store/player/hook', () => ({ usePlayerMusicInfo: () => ({ name: 'song', singer: 'artist', album: 'album' }) }))
@@ -42,7 +42,7 @@ it('artist selection displays real catalog and close invalidates pending load', 
   await act(async() => { tree.root.findByType('Modal' as any).props.onRequestClose() })
   await act(async() => { finish({ list: [song('late')], page: 1, limit: 50, total: 1, hasMore: false }) })
   expect(tree.root.findByType('Modal' as any).props.visible).toBe(false)
-  expect(JSON.stringify(tree.toJSON())).not.toContain('late')
+  expect(tree.root.findByType('FlatList' as any).props.data).toEqual([])
 })
 it('unsupported album displays a recoverable error instead of fuzzy search results', async() => {
   mocks.resolve.mockRejectedValue(new Error('unsupported'))

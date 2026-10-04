@@ -110,6 +110,10 @@ export default {
 
     global.state_event.playTempPlayListChanged({ ...state.tempPlayList })
   },
+  updateQueuedVersion(listId: string, musicInfo: LX.Music.MusicInfo) {
+    state.tempPlayList = state.tempPlayList.map(item => item.listId === listId && item.musicInfo.id === musicInfo.id ? { ...item, musicInfo } : item)
+    global.state_event.playTempPlayListChanged({ ...state.tempPlayList })
+  },
   removeTempPlayList(index: number) {
     state.tempPlayList.splice(index, 1)
 

@@ -1,4 +1,5 @@
 export interface InitState {
+  exclusiveBatch: boolean
   playbackGeneration: number
   resourceMusicId: string | null
   resourceTrackId: string | null
@@ -46,6 +47,7 @@ export interface InitState {
 }
 
 const state: InitState = {
+  exclusiveBatch: false,
   playbackGeneration: 0,
   resourceMusicId: null,
   resourceTrackId: null,

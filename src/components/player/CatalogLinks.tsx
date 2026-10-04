@@ -1,6 +1,6 @@
 import { useI18n } from '@/lang'
 import { useEffect, useRef, useState } from 'react'
-import { Modal, Pressable, ScrollView, View } from 'react-native'
+import { Modal, Pressable, FlatList, View } from 'react-native'
 import Text from '@/components/common/Text'
 import playerState from '@/store/player/state'
 import { usePlayerMusicInfo } from '@/store/player/hook'
@@ -42,11 +42,13 @@ export default () => {
           {state.targets.length > 1 ? state.targets.map(target => <Pressable accessibilityRole="button" key={`${target.source}_${target.id}`} onPress={() => { run(async() => controller.select(target)) }}><Text>{target.name}</Text></Pressable>) : null}
           {state.loading ? <Text>{t('catalog_loading')}</Text> : null}
           {state.error ? <Pressable accessibilityRole="button" onPress={() => { run(controller.retry) }}><Text>{state.error} · {t('catalog_retry')}</Text></Pressable> : null}
-          <Text>{t('catalog_loaded')} {state.list.length}{state.total === null ? ` ${t('catalog_unknown_total')}` : ` / ${state.total} 首`}</Text>
-          <ScrollView>
-            {state.list.map((item, index) => <Pressable accessibilityRole="button" key={item.id} onPress={() => { playSelectedList(state.list.slice(index)); close() }}><Text>{index + 1}. {item.name} · {item.singer}</Text></Pressable>)}
-            {state.hasMore ? <Pressable accessibilityRole="button" disabled={state.loading} onPress={() => { run(controller.loadMore) }}><Text>{t('catalog_more')}</Text></Pressable> : null}
-          </ScrollView>
+          <Text>{t('catalog_loaded')} {state.list.length}{state.total === null ? ` ${t('catalog_unknown_total')}` : ` / ${state.total} ${t('catalog_songs_unit')}`}</Text>
+          <FlatList
+            style={{ flexGrow: 0 }} initialNumToRender={16} windowSize={5}
+            data={state.list} keyExtractor={item => item.id}
+            renderItem={({ item, index }) => <Pressable accessibilityRole="button" onPress={() => { playSelectedList(state.list.slice(index)); close() }}><Text>{index + 1}. {item.name} · {item.singer}</Text></Pressable>}
+            ListFooterComponent={state.hasMore ? <Pressable accessibilityRole="button" disabled={state.loading} onPress={() => { run(controller.loadMore) }}><Text>{t('catalog_more')}</Text></Pressable> : null}
+          />
         </View>
       </View>
     </Modal>

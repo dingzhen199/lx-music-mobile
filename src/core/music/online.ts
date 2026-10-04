@@ -1,4 +1,3 @@
-import { updateListMusics } from '@/core/list'
 import settingState from '@/store/setting/state'
 import {
   saveLyric,
@@ -82,10 +81,7 @@ export const getPicUrl = async({ musicInfo, listId, isRefresh, allowToggleSource
   if (musicInfo.meta.picUrl && !isRefresh) return musicInfo.meta.picUrl
   return handleGetOnlinePicUrl({ musicInfo, onToggleSource, isRefresh, allowToggleSource }).then(({ url, musicInfo: targetMusicInfo, isFromCache }) => {
     // picRequest = null
-    if (listId) {
-      musicInfo.meta.picUrl = url
-      void updateListMusics([{ id: listId, musicInfo }])
-    }
+    // Artwork is a playback result; never overwrite collection/version metadata.
     // savePic({ musicInfo, url, listId })
     return url
   })

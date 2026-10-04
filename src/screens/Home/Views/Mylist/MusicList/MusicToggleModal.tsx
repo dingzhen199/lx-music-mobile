@@ -1,4 +1,4 @@
-import { getPreferredVersion } from '@/core/music/versionPreference'
+import { getPreferredVersion, selectManualVersion } from '@/core/music/versionPreference'
 import { useRef, useImperativeHandle, forwardRef, useState, useCallback, memo, useEffect } from 'react'
 import Text from '@/components/common/Text'
 import { createStyle } from '@/utils/tools'
@@ -302,12 +302,16 @@ const Modal = forwardRef<ModalType, {}>((props, ref) => {
     error: boolean
   }>({ sourceInfo: [], lists: {}, loading: false, error: false })
   const [source, setSource] = useState<LX.OnlineSource | ''>('')
+  const hasPreviewed = useRef(false)
+  const playbackContext = useRef<typeof playerState.playMusicInfo>()
   const requestRevision = useRef(0)
   const dialogRef = useRef<DialogType>(null)
   const isUnmountedRef = useUnmounted()
   const [toggleSource, setToggleSource] = useState<LX.Music.MusicInfoOnline | null>(null)
 
   const handlePlay = useCallback((musicInfo: LX.Music.MusicInfoOnline) => {
+    hasPreviewed.current = true
+    musicInfo = selectManualVersion(musicInfo, musicInfo) as LX.Music.MusicInfoOnline
     setToggleSource(musicInfo)
     const isPlaying = !!playerState.playMusicInfo.musicInfo
     addTempPlayList([{ listId: LIST_IDS.PLAY_LATER, musicInfo, isTop: true }])
@@ -345,6 +349,8 @@ const Modal = forwardRef<ModalType, {}>((props, ref) => {
   }, [isUnmountedRef])
   useImperativeHandle(ref, () => ({
     show(info) {
+      hasPreviewed.current = false
+      playbackContext.current = { ...playerState.playMusicInfo }
       infoRef.current = info
       setToggleSource(null)
       setSource('')
@@ -355,8 +361,8 @@ const Modal = forwardRef<ModalType, {}>((props, ref) => {
     },
   }))
 
-  const confirmToggleSource = useCallback(async(musicInfo: LX.Music.MusicInfoOnline) => {
-    const isClose = await handleToggleSource(infoRef.current.listId, infoRef.current.musicInfo, musicInfo)
+  const confirmToggleSource = useCallback(async(musicInfo: LX.Music.MusicInfo) => {
+    const isClose = await handleToggleSource(infoRef.current.listId, infoRef.current.musicInfo, musicInfo, hasPreviewed.current ? playbackContext.current : undefined)
     if (isClose) dialogRef.current?.setVisible(false)
   }, [])
 
@@ -381,8 +387,8 @@ const Modal = forwardRef<ModalType, {}>((props, ref) => {
         }
         {infoRef.current.musicInfo ? <>
           <SourceDetail info={getPreferredVersion(infoRef.current.musicInfo)} onConfirm={confirmToggleSource} toggleSource={toggleSource} />
-          {infoRef.current.musicInfo.source !== 'local' && getPreferredVersion(infoRef.current.musicInfo).id !== infoRef.current.musicInfo.id
-            ? <Button onPress={() => { void confirmToggleSource(infoRef.current.musicInfo as LX.Music.MusicInfoOnline) }}><Text>{global.i18n.t('playback_restore_original')}</Text></Button>
+          {getPreferredVersion(infoRef.current.musicInfo).id !== infoRef.current.musicInfo.id
+            ? <Button onPress={() => { void confirmToggleSource(infoRef.current.musicInfo) }}><Text>{global.i18n.t('playback_restore_original')}</Text></Button>
             : null}
         </> : null}
       </View>

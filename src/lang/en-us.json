@@ -574,5 +574,16 @@
   "catalog_loaded": "Loaded",
   "catalog_unknown_total": "songs (total unknown)",
   "catalog_more": "Load more",
-  "playback_rescue_unknown": "Original file unavailable; playing a temporary stream. The source did not report version identity."
+  "playback_rescue_unknown": "Original file unavailable; playing a temporary stream. The source did not report version identity.",
+  "catalog_songs_unit": "songs",
+  "catalog_artist_songs": "Artist songs",
+  "catalog_album_songs": "Album songs",
+  "catalog_unsupported": "This provider does not support this catalog",
+  "catalog_album_missing": "An exact album ID is required to open this catalog",
+  "catalog_artist_missing": "Song details did not provide an exact artist ID",
+  "catalog_invalid_parameters": "Invalid catalog parameters",
+  "catalog_invalid_response": "Invalid catalog response",
+  "catalog_load_error": "Catalog failed to load; please retry",
+  "catalog_no_new_songs": "No new songs returned. Retry; loaded songs remain available.",
+  "playback_batch_radio_paused": "Playing only this selection; recommendations are paused. Playback stops at its end. Play a regular list or start a new station to resume."
 }

@@ -1,7 +1,8 @@
+vi.mock('@/store/player/action', () => ({ default: { updateQueuedVersion: vi.fn() } }))
 import { expect, it, vi } from 'vitest'
 const mocks = vi.hoisted(() => ({ list: [] as LX.Music.MusicInfo[], update: vi.fn(), play: vi.fn() }))
 vi.mock('@/core/list', () => ({ updateListMusics: mocks.update, addListMusics: vi.fn(), removeListMusics: vi.fn(), updateListMusicPosition: vi.fn() }))
-vi.mock('@/core/player/player', () => ({ playListById: mocks.play }))
+vi.mock('@/core/player/player', () => ({ reloadVersion: mocks.play }))
 vi.mock('@/core/player/tempPlayList', () => ({ addTempPlayList: vi.fn() }))
 vi.mock('@/core/dislikeList', () => ({}))
 vi.mock('@/store/setting/state', () => ({ default: { setting: {} } }))
@@ -28,5 +29,15 @@ it('confirming the actual preview returns playback to the stable collection iden
   mocks.list = [a]
   playerState.playMusicInfo = { musicInfo: b, listId: 'playLater', isTempPlay: true }
   await handleToggleSource('owned', a, b)
-  expect(mocks.play).toHaveBeenCalledWith('owned', 'a')
+  expect(mocks.play).toHaveBeenCalledWith(expect.objectContaining({ id: 'a' }), 'owned', expect.any(Object))
+})
+
+it('restoring A after preview C uses saved owner context, independent of selected candidate', async() => {
+  const a = song('a'); const b = song('b'); const c = song('c')
+  a.meta.toggleMusicInfo = b
+  mocks.list = [a]
+  const context = { musicInfo: a, listId: 'owned', isTempPlay: true }
+  playerState.playMusicInfo = { musicInfo: c, listId: null, isTempPlay: true }
+  await handleToggleSource('owned', a, a, context)
+  expect(mocks.play).toHaveBeenLastCalledWith(expect.objectContaining({ id: 'a', meta: expect.objectContaining({ toggleMusicInfo: null }) }), 'owned', context)
 })

@@ -574,5 +574,16 @@
   "catalog_loaded": "已載入",
   "catalog_unknown_total": "首（總數未知）",
   "catalog_more": "載入更多",
-  "playback_rescue_unknown": "原檔案不可用，正在播放臨時串流；音源未提供實際版本身分"
+  "playback_rescue_unknown": "原檔案不可用，正在播放臨時串流；音源未提供實際版本身分",
+  "catalog_songs_unit": "首",
+  "catalog_artist_songs": "藝人歌曲",
+  "catalog_album_songs": "專輯歌曲",
+  "catalog_unsupported": "目前提供方暫不支援此目錄",
+  "catalog_album_missing": "缺少準確的專輯 ID，無法開啟完整目錄",
+  "catalog_artist_missing": "歌曲詳細資訊未提供準確的藝人 ID，無法開啟完整目錄",
+  "catalog_invalid_parameters": "目錄參數無效",
+  "catalog_invalid_response": "提供方回傳的目錄格式無效",
+  "catalog_load_error": "目錄載入失敗，請重試",
+  "catalog_no_new_songs": "提供方未回傳新的目錄歌曲，請重試；已載入內容仍可使用",
+  "playback_batch_radio_paused": "僅播放本次所選，推薦暫不續補；結束後停止。一般播放或重新開台可恢復。"
 }

@@ -574,5 +574,16 @@
   "catalog_loaded": "已加载",
   "catalog_unknown_total": "首（总数未知）",
   "catalog_more": "加载更多",
-  "playback_rescue_unknown": "原文件不可用，正在播放临时流；音源未提供实际版本身份"
+  "playback_rescue_unknown": "原文件不可用，正在播放临时流；音源未提供实际版本身份",
+  "catalog_songs_unit": "首",
+  "catalog_artist_songs": "艺人歌曲",
+  "catalog_album_songs": "专辑歌曲",
+  "catalog_unsupported": "当前提供方暂不支持此目录",
+  "catalog_album_missing": "缺少准确的专辑 ID，无法打开完整目录",
+  "catalog_artist_missing": "歌曲详情未提供准确的艺人 ID，无法打开完整目录",
+  "catalog_invalid_parameters": "目录参数无效",
+  "catalog_invalid_response": "提供方返回的目录格式无效",
+  "catalog_load_error": "目录加载失败，请重试",
+  "catalog_no_new_songs": "提供方未返回新的目录歌曲，请重试；已加载内容仍可使用",
+  "playback_batch_radio_paused": "仅播放本次所选，推荐暂不续补；结束后停止。普通播放或重新开台可恢复。"
 }

@@ -8,17 +8,20 @@ This is a new user-requested change after the independently reviewed desktop-por
 - Historical unmarked `toggleMusicInfo` remains a legacy preference; no migration invents a manual choice.
 - The common URL facade resolves the preferred version for playback and preload. Rescue only records runtime `resolvedMusicInfo`, never mutates the collection. A notice and the queue's temporary-source label explain the substitution. Next playback retries the preferred version.
 - Cache records are accepted only when actual ID equals requested ID. New rescue URLs are stored only under their actual ID. Completed download files remain local-first, even offline. Local-source APIs that only return a URL cannot provide reliable actual version metadata; their runtime state explicitly reports unknown identity.
+- Cover fetching never writes entire collection metadata; old playback responses require owner identity and generation.
+- Version changes reload the current owner without clearing pending selected songs, and update matching queued entries in place.
 - Previewing B and confirming it returns the player to original collection identity A. The version dialog shows the effective preference and provides a direct original-version action; A → B → A is supported even when search does not return A.
 
 ## Queue and multiple selection
 
 - The button beside progress opens current song, actual next song, pending FIFO items and the current base playlist. The playlist section does not promise a full random future order; next uses the same selector as playback/preload.
+- Radio retains its saved preference but is suspended throughout a finite batch and at its end; ordinary-list playback or explicitly starting a station restores recommendations. Old in-flight results are invalidated. The queue states this pause.
 - Multi-select Play uses visible row order, clears the old pending queue and history, then plays exactly the selected rows through the existing temporary queue. No old/default playlist is appended after the batch. Ordinary single-row playback retains existing behavior.
 - Queue reads invalidate pending next-song results on close/unmount/newer updates. New selection clears temporary resolution metadata.
 
 ## Exact artist/album catalogs
 
-The horizontal and vertical player headers have artist and album actions. The shared desktop adapter/controller is adapted to the mobile request-object API. Artist IDs survive SDK normalization and conversion. Old tracks can resolve IDs from exact song detail; no fuzzy name search is presented as a full catalog. Collaborations show an artist picker. Paging deduplicates results, supports retry, and rejects stale close/switch results.
+The horizontal and vertical player headers have artist and album actions. The shared desktop adapter/controller is adapted to the mobile request-object API. Artist IDs survive SDK normalization and conversion. Old tracks can resolve IDs from exact song detail; no fuzzy name search is presented as a full catalog. Collaborations show an artist picker. Virtualized views bound rendered rows. Catalog errors/titles/count units follow the active language. Paging deduplicates results, supports retry, and rejects stale close/switch results.
 
 Currently available SDK routes: tx/wy/kg artist, kw/kg/mg album. Other provider/kind combinations explicitly report unsupported; this does not mean every provider exposes a full catalog. Results are the provider's catalog, subject to its availability. Unknown totals remain unknown, and a short page without a total is not falsely called complete.
 

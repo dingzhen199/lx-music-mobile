@@ -1,4 +1,4 @@
-const resolvedMocks = vi.hoisted(() => ({ url: vi.fn(), resource: vi.fn(), toast: vi.fn() }))
+const resolvedMocks = vi.hoisted(() => ({ runDebounce: false, pic: vi.fn(), lyric: vi.fn(), url: vi.fn(), resource: vi.fn(), toast: vi.fn() }))
 vi.mock('@/store/common/state', () => ({ default: { fontSize: 1, navActiveId: 'nav_search' } }))
 vi.mock('@/core/common', () => ({ setNavActiveId: vi.fn() }))
 vi.mock('react-native', () => ({ Dimensions: { get: () => ({ width: 400, height: 800 }) }, Platform: { OS: 'android', select: (v: any) => v.android }, PixelRatio: { get: () => 1, getFontScale: () => 1, roundToNearestPixel: (n: number) => n } }))
@@ -9,8 +9,8 @@ vi.mock('@/store/setting/state', () => ({ default: { setting: { 'player.togglePl
 vi.mock('@/utils/common', () => ({ getRandom: () => 0 }))
 vi.mock('@/utils', () => ({ arrPush: (a: unknown[], b: unknown[]) => a.push(...b), arrUnshift: (a: unknown[], b: unknown[]) => a.unshift(...b), formatPlayTime2: String }))
 vi.mock('@/plugins/player', () => ({ isInitialized: () => true, setStop: async() => {}, setPause: vi.fn(), setPlay: vi.fn(), setResource: resolvedMocks.resource }))
-vi.mock('@/core/music', () => ({ getMusicUrl: resolvedMocks.url, getPicPath: vi.fn(), getLyricInfo: vi.fn() }))
-vi.mock('@/utils/tools', () => ({ debounceBackgroundTimer: () => () => {}, toast: resolvedMocks.toast }))
+vi.mock('@/core/music', () => ({ getMusicUrl: resolvedMocks.url, getPicPath: resolvedMocks.pic, getLyricInfo: resolvedMocks.lyric }))
+vi.mock('@/utils/tools', () => ({ debounceBackgroundTimer: (fn: (info: unknown) => void) => (info: unknown) => { if (resolvedMocks.runDebounce) fn(info) }, toast: resolvedMocks.toast }))
 vi.mock('@/utils/listManage', () => ({ getListMusicSync: () => [] }))
 vi.mock('@/core/player/progress', () => ({ setProgress: vi.fn() }))
 vi.mock('@/core/list', () => ({ addListMusics: vi.fn(), removeListMusics: vi.fn() }))
@@ -19,7 +19,7 @@ vi.mock('./utils', () => ({ filterList: vi.fn() }))
 vi.mock('react-native-background-timer', () => ({ default: { setTimeout: () => 1, clearTimeout: vi.fn() } }))
 import actions from '@/store/player/action'
 import state from '@/store/player/state'
-import { playSelectedList, playNext, getNextPlayMusicInfo, setMusicUrl } from './player'
+import { playSelectedList, playNext, getNextPlayMusicInfo, setMusicUrl, reloadVersion } from './player'
 const song = (id: string) => ({ id, source: 'wy', name: id, singer: '', interval: null, meta: {} }) as LX.Music.MusicInfoOnline
 beforeEach(() => {
   vi.stubGlobal('state_event', new StateEvent()); vi.stubGlobal('app_event', new AppEvent())
@@ -27,6 +27,7 @@ beforeEach(() => {
   vi.stubGlobal('i18n', { t: (key: string) => key })
   vi.clearAllMocks()
   state.isPlay = false
+  resolvedMocks.runDebounce = false
   actions.setPlayListId('old'); actions.clearTempPlayeList(); actions.clearPlayedList()
 })
 it('real queue plays every selected row once in supplied visible order and drops old continuation', async() => {
@@ -76,4 +77,21 @@ it('local URL-only rescue is explicitly marked unknown rather than inventing a p
   expect(state.playMusicInfo.temporarySourceUnknown).toBe(true)
   expect(state.playMusicInfo.resolvedMusicInfo).toBeUndefined()
   expect(resolvedMocks.toast).toHaveBeenCalledOnce()
+})
+
+it('late artwork of the same collection ID cannot replace the new version cover', async() => {
+  resolvedMocks.runDebounce = true
+  let finish!: (url: string) => void
+  resolvedMocks.pic.mockImplementationOnce(async() => new Promise(resolve => { finish = resolve })).mockResolvedValue('new-cover')
+  resolvedMocks.lyric.mockResolvedValue({ rawlrcInfo: { lyric: '' } })
+  resolvedMocks.url.mockResolvedValue('url')
+  const a = song('a')
+  playSelectedList([a], 'owned')
+  await vi.waitFor(() => { expect(finish).toBeTypeOf('function') })
+  const pinned = { ...a, meta: { ...a.meta, toggleMusicInfo: song('b') } } as LX.Music.MusicInfoOnline
+  reloadVersion(pinned, 'owned')
+  await vi.waitFor(() => { expect(state.musicInfo.pic).toBe('new-cover') })
+  finish('old-cover')
+  await Promise.resolve(); await Promise.resolve()
+  expect(state.musicInfo.pic).toBe('new-cover')
 })

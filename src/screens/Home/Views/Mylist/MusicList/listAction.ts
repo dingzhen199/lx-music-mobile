@@ -1,6 +1,7 @@
+import playerActions from '@/store/player/action'
 import { selectManualVersion } from '@/core/music/versionPreference'
 import { addListMusics, removeListMusics, updateListMusicPosition, updateListMusics } from '@/core/list'
-import { playList, playListById, playNext, playSelectedList } from '@/core/player/player'
+import { playList, reloadVersion, playNext, playSelectedList } from '@/core/player/player'
 import { addTempPlayList } from '@/core/player/tempPlayList'
 import settingState from '@/store/setting/state'
 import { similar, sortInsert, toOldMusicInfo } from '@/utils'
@@ -146,12 +147,13 @@ export const handleDislikeMusic = async(musicInfo: SelectInfo['musicInfo']) => {
   }
 }
 
-export const handleToggleSource = async(listId: string, musicInfo: LX.Music.MusicInfo, toggleMusicInfo: LX.Music.MusicInfoOnline) => {
+export const handleToggleSource = async(listId: string, musicInfo: LX.Music.MusicInfo, toggleMusicInfo: LX.Music.MusicInfo, playbackContext?: typeof playerState.playMusicInfo) => {
   const original = getListMusicSync(listId).find(item => item.id === musicInfo.id) ?? musicInfo
   const pinned = selectManualVersion(original, toggleMusicInfo)
   if (getListMusicSync(listId).some(item => item.id === original.id)) await updateListMusics([{ id: listId, musicInfo: pinned }])
   else await addListMusics(listId, [pinned], settingState.setting['list.addMusicLocationType'])
+  playerActions.updateQueuedVersion(listId, pinned)
   const current = playerState.playMusicInfo
-  if ((current.listId === listId && current.musicInfo?.id === original.id) || (current.isTempPlay && current.musicInfo === toggleMusicInfo)) void playListById(listId, original.id)
+  if (playbackContext != null || (current.listId === listId && current.musicInfo?.id === original.id) || (current.isTempPlay && current.musicInfo === toggleMusicInfo)) reloadVersion(pinned, listId, playbackContext ?? current)
   return true
 }

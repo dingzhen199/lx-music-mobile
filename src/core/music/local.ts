@@ -1,6 +1,5 @@
 
 import { saveLyric, saveMusicUrl } from '@/utils/data'
-import { updateListMusics } from '@/core/list'
 import {
   buildLyricInfo,
   getCachedLyricInfo,
@@ -127,10 +126,7 @@ export const getPicUrl = async({ musicInfo, listId, isRefresh, skipFilePic, onTo
   onToggleSource()
   return getOtherSourceByLocal(musicInfo, async(otherSource) => {
     return getOnlineOtherSourcePicUrl({ musicInfos: [...otherSource], onToggleSource, isRefresh }).then(({ url, musicInfo: targetMusicInfo, isFromCache }) => {
-      if (listId) {
-        musicInfo.meta.picUrl = url
-        void updateListMusics([{ id: listId, musicInfo }])
-      }
+      // Do not publish stale collection metadata from an asynchronous cover request.
 
       return url
     })

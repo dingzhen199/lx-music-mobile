@@ -1,3 +1,4 @@
+import nativePlayerState from '@/store/player/state'
 import { recommendEvents } from './adapters/events'
 /**
  * “从此歌出发”探索会话编排（T-B2 薄层）/ 探索电台编排（TT-1）。
@@ -492,7 +493,7 @@ const applyResult = (result: ExploreResult | PlatformExploreResult, batch: Pick<
 
 /** 执行一次计划（单飞：在途期间合并为一次待续补；失败按退避重试，最多 REFILL_MAX_RETRY 次）。 */
 const plan = async(mode: 'initial' | 'refill', trigger: RefillTrigger = 'explicit'): Promise<void> => {
-  if (!state.value) return
+  if (!state.value || nativePlayerState.exclusiveBatch) return
   if (trigger === 'automatic' && !canAutoRefill()) {
     if (!refillFlight.inFlight) refillState.value = 'idle'
     return
@@ -512,7 +513,7 @@ const plan = async(mode: 'initial' | 'refill', trigger: RefillTrigger = 'explici
   refillState.value = 'refilling'
   // 捕获发起时的代际：await 期间会话可能被结束/重启，结果只属于发起时的会话
   const e = epoch
-  const isCancelled = (): boolean => e !== epoch || (trigger === 'automatic' && !canAutoRefill())
+  const isCancelled = (): boolean => nativePlayerState.exclusiveBatch || e !== epoch || (trigger === 'automatic' && !canAutoRefill())
   try {
     // 批次快照取计划发起时的半径与原样约束（await 期间用户改距离/约束不影响本批次标注）
     const stateAtPlan = state.value
@@ -673,6 +674,7 @@ const reanchorRadioSession = (prev: SessionState, play: NonNullable<ReturnType<t
  * - ignore：不动作（电台关且不在路径上时，用户切到非推荐歌曲不会自动续补，避免抢占播放权）。
  */
 const handleMusicToggled = (reason: LX.Player.MusicChangeReason = 'user'): void => {
+  if (nativePlayerState.exclusiveBatch) { endSession(); return }
   const st = state.value
   const play = currentMusic()
   // SongChangeSong 已裁剪为判定实际消费的 id；宽对象经变量透传（结构类型兼容），不再逐字段复制
@@ -753,6 +755,8 @@ const subscribeMusicToggled = (): void => {
  * 只有用户显式点击本函数才会重开；切歌/自动续补等内部流程不经过它，不会误判重开。
  */
 export const startSession = async(): Promise<void> => {
+  // Explicitly opening a new station releases the finite-batch suppression.
+  nativePlayerState.exclusiveBatch = false
   const play = currentMusic()
   if (!play) throw new Error('请先播放歌曲')
   const st = state.value
