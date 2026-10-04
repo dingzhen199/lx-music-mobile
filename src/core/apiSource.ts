@@ -52,6 +52,7 @@ export const setApiSource = (apiId: string) => {
   global.lx.apiInitPromise[0] = new Promise<boolean>(resolve => {
     const timer = setTimeout(() => {
       if (currentGeneration !== generation) return
+      if (apiId.startsWith('user_api')) action.setApiStatus(apiId, false, 'init timeout')
       setUserApiStatus(false, 'init timeout')
       global.lx.apiInitPromise[2](false)
     }, USER_API_INIT_TIMEOUT_MS)

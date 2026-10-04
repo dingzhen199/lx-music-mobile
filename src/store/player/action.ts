@@ -19,6 +19,7 @@ export default {
   setPlayMusicInfo(listId: string | null, musicInfo: LX.Download.ListItem | LX.Music.MusicInfo | null, isTempPlay: boolean = false, metadata: Pick<LX.Player.PlayMusicInfo, 'alternativeMusicInfos' | 'recommendationSessionId'> = {}) {
     state.playbackGeneration++
     state.resourceMusicId = null
+    state.resourceTrackId = null
     state.playMusicInfo = { listId, musicInfo, isTempPlay, ...metadata }
 
     global.state_event.playMusicInfoChanged(state.playMusicInfo)

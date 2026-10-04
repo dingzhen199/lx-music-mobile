@@ -71,12 +71,15 @@ it('deferred duration cannot bind to B or a repeated A generation', async() => {
   const { readCurrentPlayback } = await import('@/core/player/readCurrentPlayback')
   let finish!: (value: number) => void
   actions.setPlayMusicInfo('owned', song('a'))
-  const old = readCurrentPlayback(async() => new Promise<number>(resolve => { finish = resolve }))
+  state.resourceTrackId = 'a-1'
+  const old = readCurrentPlayback(async() => new Promise<number>(resolve => { finish = resolve }), async() => 'a-1')
+  await vi.advanceTimersByTimeAsync(0)
   actions.setPlayMusicInfo('owned', song('b'))
   actions.setPlayMusicInfo('owned', song('a'))
   finish(200)
   expect(await old).toBeNull()
-  expect(await readCurrentPlayback(async() => 100)).toBe(100)
+  state.resourceTrackId = 'a-2'
+  expect(await readCurrentPlayback(async() => 100, async() => 'a-2')).toBe(100)
 })
 it('same-tick settings/play/pause observers see the new rate before lifecycle callbacks', async() => {
   const settings = (await import('@/store/setting/state')).default
@@ -103,4 +106,26 @@ it('provider writeback preserves resource identity and generation without a synt
   expect(state.resourceMusicId).toBe('original')
   expect(state.playbackGeneration).toBe(generation)
   expect(toggled).not.toHaveBeenCalled()
+})
+vi.mock('@/utils/data', () => ({ getRecommendProfile: async() => null, saveRecommendProfile: vi.fn() }))
+vi.mock('@/core/recommend/llm', () => ({ llmComplete: vi.fn() }))
+it.each([false, true])('real error/playerError stream pauses profile listening idempotently (resume=%s)', async(resume) => {
+  const profile = await import('../profile')
+  profile.initRecommendProfile()
+  await vi.advanceTimersByTimeAsync(0)
+  actions.setPlayMusicInfo('owned', song('a'))
+  hub.musicToggled()
+  actions.setMaxplayTime(20); hub.playerLoadeddata()
+  actions.setIsPlay(true); hub.play()
+  await vi.advanceTimersByTimeAsync(14000)
+  actions.setIsPlay(false); hub.error(); hub.playerError()
+  await vi.advanceTimersByTimeAsync(5000)
+  if (resume) {
+    actions.setIsPlay(true); hub.play()
+    await vi.advanceTimersByTimeAsync(1000)
+    actions.setIsPlay(false); hub.playerError(); hub.error()
+    await vi.advanceTimersByTimeAsync(5000)
+  }
+  actions.setPlayMusicInfo('owned', song('b')); hub.musicToggled()
+  expect(profile.getProfileState()?.completes).toBe(0)
 })

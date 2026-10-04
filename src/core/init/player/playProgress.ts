@@ -1,7 +1,7 @@
 import { readCurrentPlayback } from '@/core/player/readCurrentPlayback'
 import { updateListMusics } from '@/core/list'
 import { setMaxplayTime, setNowPlayTime } from '@/core/player/progress'
-import { setCurrentTime, getDuration, getPosition } from '@/plugins/player'
+import { setCurrentTime, getDuration, getPosition, getNativeTrackId } from '@/plugins/player'
 import { formatPlayTime2 } from '@/utils/common'
 import { savePlayInfo } from '@/utils/data'
 import { throttleBackgroundTimer } from '@/utils/tools'
@@ -29,21 +29,24 @@ export default () => {
 
   const getCurrentTime = () => {
     const generation = playerState.playbackGeneration
-    let id = playerState.musicInfo.id
-    void getPosition().then(position => {
-      if (!position || generation !== playerState.playbackGeneration || id != playerState.musicInfo.id) return
+    const resource = playerState.resourceTrackId
+    void readCurrentPlayback(getPosition, getNativeTrackId, generation).then(position => {
+      if (position == null || generation !== playerState.playbackGeneration || resource !== playerState.resourceTrackId) return
       setNowPlayTime(position)
       if (!playerState.isPlay) return
 
       if (settingState.setting['player.isSavePlayTime'] && !playerState.playMusicInfo.isTempPlay && isScreenOn) {
         delaySavePlayInfo()
       }
-    })
+    }).catch(error => { console.warn('[player] position unavailable', error) })
   }
   const getMaxTime = async() => {
-    const duration = await readCurrentPlayback(getDuration)
-    if (duration == null) return
+    const generation = playerState.playbackGeneration
+    const resource = playerState.resourceTrackId
+    const duration = await readCurrentPlayback(getDuration, getNativeTrackId, generation)
+    if (duration == null || generation !== playerState.playbackGeneration || resource !== playerState.resourceTrackId) return
     setMaxplayTime(duration)
+    if (duration > 0) global.app_event.playerLoadeddata()
 
     if (playerState.playMusicInfo.musicInfo && 'source' in playerState.playMusicInfo.musicInfo && !playerState.playMusicInfo.musicInfo.interval) {
       // console.log(formatPlayTime2(playProgress.maxPlayTime))
@@ -87,7 +90,7 @@ export default () => {
 
 
   const handlePlay = () => {
-    void getMaxTime()
+    void getMaxTime().catch(error => { console.warn('[player] duration unavailable', error) })
     // prevProgressStatus = 'normal'
     // handleSetTaskBarState(playProgress.progress, prevProgressStatus)
     startUpdateTimeout()
@@ -168,17 +171,17 @@ export default () => {
     if (state == 'active' && !isScreenOn) handleScreenStateChanged('ON')
   })
 
-  global.app_event.on('play', handlePlay)
-  global.app_event.on('pause', handlePause)
-  global.app_event.on('stop', handleStop)
-  global.app_event.on('error', handleError)
+  global.app_event.onSync('play', handlePlay)
+  global.app_event.onSync('pause', handlePause)
+  global.app_event.onSync('stop', handleStop)
+  global.app_event.onSync('error', handleError)
   global.app_event.on('setProgress', setProgress)
   // global.app_event.on(eventPlayerNames.restorePlay, handleRestorePlay)
   // global.app_event.on('playerLoadeddata', handleLoadeddata)
   // global.app_event.on('playerCanplay', handleCanplay)
   // global.app_event.on('playerWaiting', handleWating)
   // global.app_event.on('playerEmptied', handleEmpied)
-  global.app_event.on('musicToggled', handleSetPlayInfo)
+  global.app_event.onSync('musicToggled', handleSetPlayInfo)
   global.state_event.on('configUpdated', handleConfigUpdated)
 
   onScreenStateChange(handleScreenStateChanged)

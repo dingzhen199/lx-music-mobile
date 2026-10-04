@@ -60,6 +60,7 @@ export {
   setPlay,
   setCurrentTime,
   getDuration,
+  getNativeTrackId,
   setStop,
   resetPlay,
   getPosition,

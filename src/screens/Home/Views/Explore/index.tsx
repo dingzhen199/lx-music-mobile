@@ -1,3 +1,4 @@
+import { groupPathByBatch } from '@/core/recommend/session-core'
 import { useEffect, useState } from 'react'
 import { ScrollView, View, TextInput, Switch, StyleSheet } from 'react-native'
 import Text from '@/components/common/Text'
@@ -46,10 +47,13 @@ export default () => {
         <Button onPress={() => { setInstruction(instruction) }}>{t('recommend_apply')}</Button>
       </>}
       <View style={styles.row}><Button onPress={() => { applyFeedback('good') }}>{t('recommend_good')}</Button><Button onPress={() => { applyFeedback(engine === 'platform' ? 'dislike' : 'far') }}>{engine === 'platform' ? t('recommend_dislike') : t('recommend_far')}</Button></View>
-      {session.path.map((item, index) => <View key={`${item.id ?? 'item'}-${index}`} style={styles.track}>
+      {groupPathByBatch(session.path).map(group => <View key={group.key}>
+        <Text size={16}>{group.batch?.engine ?? '—'}{group.batch && group.batch.engine !== 'platform' ? ` · ${t('recommend_radius')}: ${group.batch.radius} · ${t('recommend_instruction')}: ${group.batch.instruction || '—'}` : ''}</Text>
+        {group.items.map((item, index) => <View key={`${item.id ?? 'item'}-${index}`} style={styles.track}>
         <Text>{item.isCurrent ? '▶ ' : ''}{item.artist} — {item.title}</Text><Text>{item.reason}</Text>
-        {engine !== 'platform' && <Text>{item.journeyRole}</Text>}
+        {group.batch?.engine !== 'platform' && <Text>{item.journeyRole}</Text>}
         <Button disabled={!item.id} onPress={() => { playPathItem(item.id) }}>{t('play')}</Button>
+        </View>)}
       </View>)}
     </>}
   </ScrollView>

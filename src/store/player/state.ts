@@ -1,6 +1,7 @@
 export interface InitState {
   playbackGeneration: number
   resourceMusicId: string | null
+  resourceTrackId: string | null
   playMusicInfo: {
     /**
      * 当前播放歌曲的列表 id
@@ -45,6 +46,7 @@ export interface InitState {
 const state: InitState = {
   playbackGeneration: 0,
   resourceMusicId: null,
+  resourceTrackId: null,
   playInfo: {
     playIndex: -1,
     playerListId: null,

@@ -2,11 +2,11 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 const env = vi.hoisted(() => ({
   setting: { 'common.apiSource': '', 'common.apiSourceBackups': [] as string[] },
   state: { list: [{ id: 'user_api_a' }, { id: 'user_api_b' }], apis: {} as Record<string, any>, qualityLists: {}, statuses: {} as Record<string, any> },
-  load: vi.fn(), destroy: vi.fn(), status: vi.fn(),
+  apiStatus: vi.fn(), load: vi.fn(), destroy: vi.fn(), status: vi.fn(),
 }))
 vi.mock('@/utils/musicSdk', () => ({ default: { supportQuality: { built_in: { wy: ['128k'] } } } }))
 vi.mock('@/store/setting/state', () => ({ default: { setting: env.setting } }))
-vi.mock('@/store/userApi', () => ({ state: env.state, action: { setApiStatus: vi.fn() } }))
+vi.mock('@/store/userApi', () => ({ state: env.state, action: { setApiStatus: env.apiStatus } }))
 vi.mock('./common', () => ({ updateSetting: (value: any) => Object.assign(env.setting, value) }))
 vi.mock('./userApi', () => ({ setUserApi: env.load, destroyUserApi: env.destroy, setUserApiStatus: env.status }))
 beforeEach(() => {
@@ -48,4 +48,11 @@ it('loads backups without changing primary readiness or unloading the primary', 
   expect(env.destroy).not.toHaveBeenCalled()
   setUserApiBackups([])
   expect(env.destroy).toHaveBeenCalledWith('user_api_b')
+})
+
+it('publishes a primary readiness timeout to per-API capability subscribers', async() => {
+  const { setApiSource } = await import('./apiSource')
+  setApiSource('user_api_a')
+  await vi.advanceTimersByTimeAsync(10000)
+  expect(env.apiStatus).toHaveBeenCalledWith('user_api_a', false, 'init timeout')
 })

@@ -550,5 +550,6 @@
   "recommend_audio_analysis": "Playback audio feature facts (optional)",
   "recommend_audio_notice": "Measures only this app’s playback, never the microphone. Requires Android audio permission and disabling audio offload, then restarting the app; uses more battery. Missing samples stay unknown; measurements are approximate.",
   "recommend_audio_unavailable": "Audio analysis unavailable on this platform",
-  "recommend_audio_permission": "Audio permission denied; analysis remains off"
+  "recommend_audio_permission": "Audio permission denied; analysis remains off",
+  "recommend_default_radius": "Default radius for new sessions"
 }

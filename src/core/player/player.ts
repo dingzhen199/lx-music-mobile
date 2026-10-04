@@ -92,8 +92,9 @@ const commitResolvedMusic = async(original: LX.Music.MusicInfo | LX.Download.Lis
 }
 
 let musicUrlRequestId = 0
+let musicUrlGeneration = 0
 const isStaleMusicUrlRequest = (musicInfo: LX.Music.MusicInfo | LX.Download.ListItem, requestId: number): boolean => {
-  return requestId !== musicUrlRequestId || global.lx.isPlayedStop || diffCurrentMusicInfo(musicInfo)
+  return requestId !== musicUrlRequestId || musicUrlGeneration !== playerState.playbackGeneration || global.lx.isPlayedStop || diffCurrentMusicInfo(musicInfo)
 }
 
 const getMusicPlayUrl = async(musicInfo: LX.Music.MusicInfo | LX.Download.ListItem, requestId: number, isRefresh = false, isRetryed = false, onResolvedMusicInfo?: (info: LX.Music.MusicInfoOnline) => void): Promise<string | null> => {
@@ -147,6 +148,7 @@ export const setMusicUrl = (musicInfo: LX.Music.MusicInfo | LX.Download.ListItem
   if (!diffCurrentMusicInfo(musicInfo)) return
   global.lx.gettingUrlId = createGettingUrlId(musicInfo)
   const requestId = ++musicUrlRequestId
+  musicUrlGeneration = playerState.playbackGeneration
   let resolvedMusicInfo: LX.Music.MusicInfoOnline | undefined
   void getMusicPlayUrl(musicInfo, requestId, isRefresh, false, info => { resolvedMusicInfo = info }).then((url) => {
     if (!url || isStaleMusicUrlRequest(musicInfo, requestId)) return

@@ -62,8 +62,25 @@ const writeData = async(values: Array<[string, any]>) => {
   const chunks = data.filter(([key]) => !keys.has(key))
   const roots = data.filter(([key]) => keys.has(key))
   // New generations never overwrite chunks reachable from the old root pointer.
-  if (chunks.length) await AsyncStorage.multiSet(chunks)
-  await AsyncStorage.multiSet(roots)
+  try {
+    if (chunks.length) await AsyncStorage.multiSet(chunks)
+    await AsyncStorage.multiSet(roots)
+  } catch (error) {
+    // Native writes can commit (even partially) before reporting failure. Re-read
+    // authoritative roots before deleting only this attempt's unreachable chunks.
+    // An unreadable root is uncertainty, not permission to remove its data.
+    if (chunks.length) {
+      try {
+        const current = await AsyncStorage.multiGet([...keys])
+        const referenced = new Set(current.flatMap(([, value]) => getPartKeys(value)))
+        const orphaned = chunks.map(([key]) => key).filter(key => !referenced.has(key))
+        if (orphaned.length) await AsyncStorage.multiRemove(orphaned)
+      } catch (cleanupError: any) {
+        log.error('storage error[staging cleanup]:', cleanupError.message)
+      }
+    }
+    throw error
+  }
   // Cleanup is after commit and best-effort: callers must publish a committed write.
   if (retired.length) {
     try {

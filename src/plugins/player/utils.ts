@@ -107,17 +107,19 @@ export const isTempId = (trackId = global.lx.playerTrackId) => !trackId || tempI
 //   },
 // }
 
-const playMusic = ((fn: (musicInfo: LX.Player.PlayMusic, url: string, time: number) => void, delay = 800) => {
+const playMusic = ((fn: (musicInfo: LX.Player.PlayMusic, url: string, time: number, generation: number) => void, delay = 800) => {
   let delayTimer: number | null = null
   let isDelayRun = false
   let timer: number | null = null
   let _musicInfo: LX.Player.PlayMusic | null = null
   let _url = ''
   let _time = 0
-  return (musicInfo: LX.Player.PlayMusic, url: string, time: number) => {
+  let _generation = 0
+  return (musicInfo: LX.Player.PlayMusic, url: string, time: number, generation: number) => {
     _musicInfo = musicInfo
     _url = url
     _time = time
+    _generation = generation
     if (timer) {
       BackgroundTimer.clearTimeout(timer)
       timer = null
@@ -132,33 +134,41 @@ const playMusic = ((fn: (musicInfo: LX.Player.PlayMusic, url: string, time: numb
         let musicInfo = _musicInfo
         let url = _url
         let time = _time
+        const generation = _generation
         _musicInfo = null
         _url = ''
         _time = 0
         isDelayRun = false
-        fn(musicInfo!, url, time)
+        fn(musicInfo!, url, time, generation)
       }, delay)
     } else {
       isDelayRun = true
-      fn(musicInfo, url, time)
+      fn(musicInfo, url, time, generation)
       delayTimer = BackgroundTimer.setTimeout(() => {
         delayTimer = null
         isDelayRun = false
       }, 500)
     }
   }
-})((musicInfo, url, time) => {
-  handlePlayMusic(musicInfo, url, time)
+})((musicInfo, url, time, generation) => {
+  handlePlayMusic(musicInfo, url, time, generation)
 })
 
 export const setResource = (musicInfo: LX.Player.PlayMusic, url: string, duration?: number) => {
   playerState.resourceMusicId = musicInfo.id
-  playMusic(musicInfo, url, duration ?? 0)
+  playerState.resourceTrackId = null
+  playMusic(musicInfo, url, duration ?? 0, playerState.playbackGeneration)
 }
 
 export const setPlay = async() => TrackPlayer.play()
 export const getPosition = async() => TrackPlayer.getPosition()
 export const getDuration = async() => TrackPlayer.getDuration()
+export const getNativeTrackId = async(): Promise<string | null> => {
+  const index = await TrackPlayer.getCurrentTrack()
+  if (index == null || index < 0) return null
+  const track = await TrackPlayer.getTrack(index)
+  return typeof track?.id === 'string' ? track.id : null
+}
 export const setStop = async() => {
   await TrackPlayer.stop()
   if (!isEmpty()) await TrackPlayer.skipToNext()

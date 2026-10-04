@@ -227,7 +227,7 @@ const handlePause = safeHandle(() => {
 })
 
 /** 曲首时长快照（D9/B7-C1）：playerLoadeddata 时点 maxPlayTime 为当前曲目真实时长；非正垃圾值按未知处理。
- *  顺序前提：emit 为订阅序同步派发，本读取依赖 usePlayProgress 先于本模块注册（useApp/index.ts 中 usePlayer 在 initRecommendProfile 之前）。 */
+ *  RN 时长读取先通过原生资源 ID/播放代次双校验，再同步更新进度、发出此事件；恢复用的旧进度不构成时长证据。 */
 const handlePlayerLoadeddata = safeHandle(() => {
   const duration = Number(playProgress.maxPlayTime)
   const snapped = Number.isFinite(duration) && duration > 0 ? duration : 0
@@ -312,6 +312,8 @@ const subscribe = (): void => {
   recommendEvents.on('play', handlePlay)
   recommendEvents.on('pause', handlePause)
   recommendEvents.on('stop', handlePause)
+  recommendEvents.on('error', handlePause)
+  recommendEvents.on('playerError', handlePause)
   recommendEvents.on('playerLoadeddata', handlePlayerLoadeddata)
   recommendEvents.on('loveListMusicsAdded', handleLoveListMusicsAdded)
 }

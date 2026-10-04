@@ -550,5 +550,6 @@
   "recommend_audio_analysis": "播放音频事实单（可选）",
   "recommend_audio_notice": "仅测量本应用正在播放的音频，不读取麦克风。需 Android 音频权限，并关闭下方“音频硬件卸载”后重启应用；会增加耗电。未采到有效信号时显示 unknown，统计为近似值。",
   "recommend_audio_unavailable": "此平台不支持音频分析",
-  "recommend_audio_permission": "未授予音频权限，保持关闭"
+  "recommend_audio_permission": "未授予音频权限，保持关闭",
+  "recommend_default_radius": "新階段預設探索距離"
 }

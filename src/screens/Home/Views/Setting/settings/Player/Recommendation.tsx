@@ -1,3 +1,4 @@
+import { clampRadius } from '@/core/recommend/session-core'
 import settingState from '@/store/setting/state'
 import { llmComplete } from '@/core/recommend/llm'
 import { createConnectionTest, type ConnectionState } from '@/core/recommend/connectionTest'
@@ -50,9 +51,12 @@ export default () => {
   const radio = useSettingValue('recommend.radio')
   const provider = useSettingValue('ai.provider')
   const concurrency = useSettingValue('ai.maxConcurrentRequests')
+  const engine = useSettingValue('recommend.engine')
+  const radius = clampRadius(useSettingValue('recommend.radius'))
   return <View style={styles.container}>
     <Text size={18}>{t('nav_explore')}</Text>
     <View style={styles.row}><Text>{t('recommend_radio')}</Text><Switch value={radio} onValueChange={value => { updateSetting({ 'recommend.radio': value }) }} /></View>
+    {engine !== 'platform' && <View style={styles.row}><Button onPress={() => { updateSetting({ 'recommend.radius': clampRadius(radius - 5) }) }}>−</Button><Text>{t('recommend_default_radius')}: {radius}</Text><Button onPress={() => { updateSetting({ 'recommend.radius': clampRadius(radius + 5) }) }}>+</Button></View>}
     <Text>{t('recommend_ai_privacy')}</Text>
     <View style={styles.row}><Text>{t('recommend_audio_analysis')}</Text><Switch disabled={audioPending} value={audioAnalysis} onValueChange={toggleAnalysis} /></View>
     <Text>{t('recommend_audio_notice')}{audioMessage ? `\n${audioMessage}` : ''}</Text>

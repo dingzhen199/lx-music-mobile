@@ -1,13 +1,22 @@
 name: Run build test
 
 on:
+  push:
+    branches:
+      - feat/desktop-parity-20261003
   pull_request:
     branches:
       - dev
 
+permissions:
+  contents: read
+
 jobs:
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      NODE_OPTIONS: --max-old-space-size=2048
 
     steps:
       - name: Check out git repository
@@ -18,11 +27,27 @@ jobs:
         with:
           node-version: 20
 
+      - name: Install Java for debug compilation
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
       - name: Install Dependencies
         run: npm ci
+
+      - name: Unit and boundary regression tests
+        run: npm test
+
+      - name: TypeScript check
+        run: npm run typecheck
 
       - name: Eslint check
         run: npm run lint
 
       - name: Test Build
-        run: npm run build-test
+        run: npm run build-test -- --max-workers 1
+
+      - name: Android debug build (no release signing or deployment)
+        working-directory: android
+        run: ./gradlew :app:assembleDebug --no-daemon --max-workers=2 -PreactNativeArchitectures=arm64-v8a -Dorg.gradle.jvmargs="-Xmx2048m -XX:MaxMetaspaceSize=768m"

@@ -586,18 +586,34 @@ export const addUserApi = async(script: string): Promise<LX.UserApi.UserApiInfo>
     ...scriptInfo,
     allowShowUpdateAlert: true,
   }
-  const next = [...userApis, apiInfo]
-  await saveData(`${userApiPrefix}${apiInfo.id}`, script)
-  await saveData(userApiPrefix, next)
+  // A previous native commit may have succeeded before reporting an error.
+  // Always derive a mutation from durable state rather than the cached list.
+  const current = await getData<LX.UserApi.UserApiInfo[]>(userApiPrefix) ?? []
+  const next = [...current, apiInfo]
+  const scriptKey = `${userApiPrefix}${apiInfo.id}`
+  try {
+    await saveData(scriptKey, script)
+    await saveData(userApiPrefix, next)
+  } catch (error) {
+    try {
+      const authoritative = await getData<LX.UserApi.UserApiInfo[]>(userApiPrefix) ?? []
+      // Preserve a script when publication committed but returned an error, or
+      // when the authoritative list cannot be read. Never delete older scripts.
+      if (!authoritative.some(api => api.id === apiInfo.id)) await removeDataMultiple([scriptKey])
+    } catch (cleanupError) {
+      console.warn('[userApi] staged script cleanup failed', cleanupError)
+    }
+    throw error
+  }
   // eslint-disable-next-line require-atomic-updates -- All source mutations execute inside the shared withUserApiData queue.
   userApis = next
   return apiInfo
 })
 export const removeUserApi = async(ids: string[]) => withUserApiData(async() => {
-  if (!userApis) return []
+  const current = await getData<LX.UserApi.UserApiInfo[]>(userApiPrefix) ?? []
   const removed = new Set(ids)
-  const next = userApis.filter(api => !removed.has(api.id))
-  const keys = userApis.filter(api => removed.has(api.id)).map(api => `${userApiPrefix}${api.id}`)
+  const next = current.filter(api => !removed.has(api.id))
+  const keys = current.filter(api => removed.has(api.id)).map(api => `${userApiPrefix}${api.id}`)
   await saveData(userApiPrefix, next)
   // eslint-disable-next-line require-atomic-updates -- All source mutations execute inside the shared withUserApiData queue.
   userApis = next
@@ -605,8 +621,9 @@ export const removeUserApi = async(ids: string[]) => withUserApiData(async() => 
   return [...userApis]
 })
 export const setUserApiAllowShowUpdateAlert = async(id: string, enable: boolean) => withUserApiData(async() => {
-  if (!userApis.some(api => api.id === id)) return
-  const next = userApis.map(api => api.id === id ? { ...api, allowShowUpdateAlert: enable } : api)
+  const current = await getData<LX.UserApi.UserApiInfo[]>(userApiPrefix) ?? []
+  if (!current.some(api => api.id === id)) return
+  const next = current.map(api => api.id === id ? { ...api, allowShowUpdateAlert: enable } : api)
   await saveData(userApiPrefix, next)
   // eslint-disable-next-line require-atomic-updates -- All source mutations execute inside the shared withUserApiData queue.
   userApis = next

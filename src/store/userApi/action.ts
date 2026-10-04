@@ -35,3 +35,16 @@ export const setApiStatus = (id: string, status: boolean, message?: string) => {
   state.statuses[id] = { status, message }
   event.runtimes_changed()
 }
+
+export const removeRuntime = (id?: string) => {
+  if (id) {
+    delete state.apis[id]
+    delete state.qualityLists[id]
+    delete state.statuses[id]
+  } else {
+    state.apis = {}
+    state.qualityLists = {}
+    state.statuses = {}
+  }
+  event.runtimes_changed()
+}

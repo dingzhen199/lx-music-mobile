@@ -27,3 +27,13 @@ Mobile master `fb8480728d875fa5e0da25eebd3a26bb71723aae`; desktop master `ad95d5
 
 ## Publication gate
 Independent spec and quality review still pending. No push, merge or release is implied by these host checks.
+
+## Review round 1 repair evidence
+
+Three major and four minor findings were accepted and repaired; see WORK_LOG. Added tests use real JS event/store/progress/profile paths and actual storage logic with controlled native/AsyncStorage IO. Native metadata now requires both the originating selection epoch and complete native track ID across async reads/installations; saved UI progress is excluded from profile duration evidence. Error/playerError no longer count retry silence. Staged-data cleanup reconciles authoritative references before deleting anything and intentionally retains data if that determination fails.
+
+The feature-push CI path will run the normal unit/type/lint/Metro checks and a standard debug build without release signing material, using ordinary GitHub Actions. It has not yet executed. Device testing remains distinct from both host and future CI compilation.
+
+The repaired UI minors are exercised by real React component rendering with mocked native host controls: immutable batch headers are visible and platform batches omit misleading radius/instruction; the default-radius button calls the persistent setting writer and never the active-session mutation. These are component/service-boundary tests, not native visual or device validation. `react-test-renderer` is a development-only dependency matching React 18.2.
+
+Review-repair candidate: full 57-suite / 811-test host run and full tsc pass; original-rule lint coverage is current for all 718 JS/TS inputs with zero missing/stale/error records. This supersedes the earlier host test counts without changing the native/device limitations above.

@@ -147,19 +147,26 @@ export const initTrackInfo = async(musicInfo: LX.Player.PlayMusic, mInfo: LX.Pla
 }
 
 
-const handlePlayMusic = async(musicInfo: LX.Player.PlayMusic, url: string, time: number) => {
-// console.log(tracks, time)
+const handlePlayMusic = async(musicInfo: LX.Player.PlayMusic, url: string, time: number, generation: number) => {
+  const current = () => generation === playerState.playbackGeneration && playerState.resourceMusicId === musicInfo.id
+  if (!current()) return
   const tracks = buildTracks(musicInfo, url)
   const track = tracks[0]
+  playerState.resourceTrackId = String(track.id)
   // await updateMusicInfo(track)
   const currentTrackIndex = await TrackPlayer.getCurrentTrack()
+  if (!current()) return
   await TrackPlayer.add(tracks).then(() => list.push(...tracks))
+  if (!current()) return
   const queue = await TrackPlayer.getQueue() as LX.Player.Track[]
+  if (!current()) return
   await TrackPlayer.skip(queue.findIndex(t => t.id == track.id))
+  if (!current()) return
 
   if (currentTrackIndex == null) {
     if (!isTempTrack(track.id as string)) {
       if (time) await TrackPlayer.seekTo(time)
+      if (!current()) return
       if (global.lx.restorePlayInfo) {
         await TrackPlayer.pause()
         // let startupAutoPlay = settingState.setting['player.startupAutoPlay']
@@ -173,8 +180,10 @@ const handlePlayMusic = async(musicInfo: LX.Player.PlayMusic, url: string, time:
     }
   } else {
     await TrackPlayer.pause()
+    if (!current()) return
     if (!isTempTrack(track.id as string)) {
       await TrackPlayer.seekTo(time)
+      if (!current()) return
       await TrackPlayer.play()
     }
   }
@@ -185,11 +194,11 @@ const handlePlayMusic = async(musicInfo: LX.Player.PlayMusic, url: string, time:
 }
 let playPromise = Promise.resolve()
 let actionId = Math.random()
-export const playMusic = (musicInfo: LX.Player.PlayMusic, url: string, time: number) => {
+export const playMusic = (musicInfo: LX.Player.PlayMusic, url: string, time: number, generation: number) => {
   const id = actionId = Math.random()
   void playPromise.finally(() => {
-    if (id != actionId) return
-    playPromise = handlePlayMusic(musicInfo, url, time)
+    if (id != actionId || generation !== playerState.playbackGeneration) return
+    playPromise = handlePlayMusic(musicInfo, url, time, generation)
   })
 }
 

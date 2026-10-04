@@ -269,3 +269,17 @@ it.each([false, true])('new rate never reweights an already settled segment (pau
   // Heard 90/160 seconds, not 150/160 from multiplying the whole listen by the final rate.
   expect(profile.getProfileState()?.completes).toBe(0)
 })
+
+it('playback errors do not count as actual listening', async() => {
+  scope.run(() => { profile.initRecommendProfile() })
+  await vi.advanceTimersByTimeAsync(0)
+  changeTrack('short')
+  mocks.progress.maxPlayTime = 20
+  events.emit('playerLoadeddata')
+  await vi.advanceTimersByTimeAsync(14000)
+  events.on('error', () => {}); events.emit('error'); events.emit('playerError')
+  mocks.playing.value = false
+  await vi.advanceTimersByTimeAsync(5000)
+  changeTrack('next')
+  expect(profile.getProfileState()?.completes).toBe(0)
+})

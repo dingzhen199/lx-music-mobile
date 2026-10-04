@@ -30,17 +30,9 @@ export const setUserApi = async(apiId: string) => {
 }
 
 export const destroyUserApi = (apiId?: string) => {
-  if (apiId) {
-    loading.delete(apiId)
-    delete state.apis[apiId]
-    delete state.qualityLists[apiId]
-    delete state.statuses[apiId]
-  } else {
-    loading.clear()
-    state.apis = {}
-    state.qualityLists = {}
-    state.statuses = {}
-  }
+  if (apiId) loading.delete(apiId)
+  else loading.clear()
+  action.removeRuntime(apiId)
   destroy(apiId)
 }
 

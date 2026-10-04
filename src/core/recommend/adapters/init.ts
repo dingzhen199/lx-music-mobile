@@ -22,9 +22,7 @@ export const initRecommendAdapters = () => {
   global.state_event.onSync('playTempPlayListChanged', syncRecommendPlayer)
   global.state_event.onSync('playPlayedListChanged', syncRecommendPlayer)
   global.state_event.onSync('playProgressChanged', () => {
-    const hadDuration = playProgress.maxPlayTime > 0
     Object.assign(playProgress, state.progress)
-    if (!hadDuration && playProgress.maxPlayTime > 0) global.app_event.playerLoadeddata()
   })
   global.app_event.onSync('mylistUpdated', syncRecommendLists)
 }

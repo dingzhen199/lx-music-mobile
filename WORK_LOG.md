@@ -40,3 +40,24 @@ Porting independent new recommendation, radio, profile and source-management cap
 - Early review persistence/identity/ordering/duration issues fixed and covered by real JS bridge or deferred storage tests
 - Native Android audio analysis implemented as an explicit opt-in Visualizer adaptation; approximate 8-bit signal statistics, not full-precision WebAudio parity. No Android SDK/adb available, native/device gates remain open
 - No desktop-reference changes, no ADR edits, no remote push
+
+## Independent final review round 1 (frozen e16d551)
+Feature and source/runtime reviewers found 3 major + 4 minor issues. Changes below are the unified repair pass, not yet a fresh acceptance.
+
+- Major feature M1: delayed asynchronous play callbacks could start duration reads under a new selection epoch while the native engine still held the old track. Reproduced with actual AppEvent/StateEvent/store/adapters/progress. Fixed with synchronous progress lifecycle, captured epoch and exact native resource identity checks before/after reads and before commits; native installation carries its originating epoch through both scheduling layers. Only validated native duration emits loadeddata; restored UI progress is not evidence
+- Major feature M2: profile did not pause on error/playerError. Reproduced false completion after 14s listen + 5s silent retry on a 20s track. Both interruptions now idempotently pause; real event/store/profile tests cover duplicate errors and recovery
+- Major source S1: failed root/list commits left new staged chunks/scripts behind. New cleanup rereads authoritative roots/list and deletes only this attempt's unreferenced staging. Commit-then-error and read-failure cases preserve referenced/uncertain data; later source mutations reconcile durable state
+- Minor source S2/S3: main timeout now updates per-API status; runtime removal clears capabilities then notifies subscribers
+- Minor feature S1/S2: immutable path batch engine/radius/instruction headers and persistent default-radius controls added (radius semantics hidden for platform batches/mode)
+
+RED evidence: lifecycle/profile 5 failing new assertions; storage/source 8 failing assertions across fault-injection stages. Focused GREEN: lifecycle/profile/bridge 37 tests; source/storage 24 tests; extra actual event/profile + resource-install tests 11 tests. Full final rerun follows.
+
+Existing build-test CI now also triggers only this feature branch on push, adds unit/type and Android debug compilation with read-only contents permission. No deploy, release workflow, release keystore, branch protection, paid runner or pull_request_target changes. Debug configuration no longer eagerly requires a private release keystore. CI has not yet run for these changes.
+
+### Review-repair candidate verification
+- Full host regression: 57 suites / 811 tests passed (`reviewfix-tests-freeze.log`, exit 0)
+- Full `tsc --noEmit`: passed, exit 0
+- All 718 JS/TS inputs have up-to-date original-rule ESLint records; missing/stale/errors = 0 across bounded batches and changed-file rechecks
+- Real React component boundary tests now cover the two UI parity gaps (native host views mocked; not device layout evidence)
+- Exact-feature CI YAML parsed and its read-only permission/trigger scope checked; CI is unexecuted until an authorized push
+- Final Metro rerun reserved for after the next independent review; native/device checks remain unrun locally
