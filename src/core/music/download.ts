@@ -1,3 +1,5 @@
+import { existsFile } from '@/utils/fs'
+import { getPreferredVersion } from './versionPreference'
 // import { store } from '@/store'
 // import { getDownloadFilePath } from '@renderer/utils/music'
 
@@ -16,12 +18,10 @@ export const getMusicUrl = async({ musicInfo, isRefresh, allowToggleSource = tru
   onToggleApiSource?: () => void
   allowToggleSource?: boolean
 }): Promise<string> => {
-  // if (!isRefresh) {
-  //   const path = await getDownloadFilePath(musicInfo, appSetting['download.savePath'])
-  //   if (path) return path
-  // }
+  // A completed download is a local resource, not a cross-provider URL cache.
+  if (musicInfo.isComplate && musicInfo.metadata.filePath && await existsFile(musicInfo.metadata.filePath)) return musicInfo.metadata.filePath
 
-  return getOnlineMusicUrl({ musicInfo: musicInfo.metadata.musicInfo, isRefresh, onToggleSource, onToggleApiSource, allowToggleSource, onResolvedMusicInfo })
+  return getOnlineMusicUrl({ musicInfo: getPreferredVersion(musicInfo.metadata.musicInfo), isRefresh, onToggleSource, onToggleApiSource, allowToggleSource, onResolvedMusicInfo })
 }
 
 export const getPicUrl = async({ musicInfo, isRefresh, listId, onToggleSource = () => {} }: {

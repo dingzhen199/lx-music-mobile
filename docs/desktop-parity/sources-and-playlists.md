@@ -27,3 +27,7 @@ Android compilation and device/emulator behavior are not verified by these mocke
 ## Independent review repair
 
 Failed staged writes now clean only this attempt's chunks/scripts after rereading their authoritative root/list references. Commit-then-error does not delete live data; failed reread or cleanup conservatively retains data rather than guessing. Subsequent source-list mutations reload durable state. Deferred-write, partial-write, commit-then-error, failed-reread and real storage/import tests cover these paths. Primary timeout updates per-source status, and removal clears runtime capabilities before notifying observers.
+
+## Version preference update
+
+The additional playback change preserves original collection IDs and manual version preferences. Cross-provider rescue is transient; cache entries are never aliased to another requested version. Source import/backup ordering and transactional storage remain unchanged. See [playback-experience.md](playback-experience.md).

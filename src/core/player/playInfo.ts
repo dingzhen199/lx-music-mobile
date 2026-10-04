@@ -1,3 +1,4 @@
+import { getPreferredVersion } from '@/core/music/versionPreference'
 import playerActions from '@/store/player/action'
 import playerState from '@/store/player/state'
 
@@ -87,8 +88,10 @@ export const resetPlayerMusicInfo = () => {
 
 const setPlayerMusicInfo = (musicInfo: LX.Music.MusicInfo | LX.Download.ListItem | null) => {
   if (musicInfo) {
+    const originalId = musicInfo.id
+    if (!('progress' in musicInfo)) musicInfo = getPreferredVersion(musicInfo)
     setMusicInfo('progress' in musicInfo ? {
-      id: musicInfo.id,
+      id: originalId,
       pic: musicInfo.metadata.musicInfo.meta.picUrl,
       name: musicInfo.metadata.musicInfo.name,
       singer: musicInfo.metadata.musicInfo.singer,
@@ -99,7 +102,7 @@ const setPlayerMusicInfo = (musicInfo: LX.Music.MusicInfo | LX.Download.ListItem
       lxlrc: null,
       rawlrc: null,
     } : {
-      id: musicInfo.id,
+      id: originalId,
       pic: musicInfo.meta.picUrl,
       name: musicInfo.name,
       singer: musicInfo.singer,

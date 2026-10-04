@@ -71,3 +71,18 @@ Existing build-test CI now also triggers only this feature branch on push, adds 
 
 ### Initial publication attempt blocked
 After identity verification, the connected GitHub integration rejected the first Git Data blob write to dingzhen199/lx-music-mobile with HTTP 403 `Resource not accessible by integration`. Repository metadata reports the user's admin/push rights, but that does not establish the integration's actual write permission. No remote branch/commit/ref was created by this attempt and no CI run was triggered. Publication is paused for access repair; no alternate write route or force update was attempted. This is an authorization blocker, not a code/build failure.
+
+## 2026-10-04 additional playback scope (after reviewed 65a7832)
+
+The user extended both clients: retain manual version preferences while permitting explicitly announced temporary rescue, show the current queue beside progress, play multiple selected rows in visible order without old-list contamination, and open exact artist/album catalogs. The prior independent approval covers none of these new changes.
+
+Root cause: Mylist manual source switching removed the original entry; automatic resolved-source writeback also replaced collection identities. URL cache aliased rescue resources under the requested ID. Multi-select Play ignored selected rows in both Mylist and OnlineList. New policy separates persistent preference/original ID from runtime resolved ID; batches reuse the existing FIFO queue with no base-list continuation. Desktop/mobile agree visible list order, not order of selection clicks. Catalog adapter/controller is shared from the new desktop work, with accurate IDs and stale-request guards.
+
+Initial tests: versionPreference missing-module red recorded, then two identity/pin tests green; two real common URL facade/cache-boundary tests green. Further UI/event/queue validation and a new independent review are pending. One transient exec transport disconnect recovered with the mandated single read-only retry after five minutes. No new GitHub write attempted; previous connector 403 remains a publication blocker.
+
+### Additional scope host candidate
+
+- 65 suites / 836 tests PASS; full tsc PASS; changed production JS/TS original-rule lint PASS (test files follow the existing lint exclusion, but compile and run).
+- Added true JS-boundary tests for FIFO next consumption, URL commit preserving original identity, local unknown-resolved identity notice, manual preview confirmation, A→B→A, and offline completed downloads. React host controls test close/late results; shared catalog adapter/controller and actual tx/wy SDK paging tests passed. Mobile's NetEase request API differs from desktop (`request.promise`), and this was adapted rather than copied blindly.
+- Removed obsolete automatic writeback module and its now-superseded tests. Most added code is provider SDK/catalog support, two small native views, localized labels and regression fixtures. No dependency or independent queue/storage engine added. Related README/CHANGELOG/FAQ and each parity behavior/validation document updated; ADR untouched.
+- Unsupported catalog provider/kind routes and local API URL-only unknown version identity remain explicitly disclosed. Real provider network/device playback and native hit-area/accessibility verification remain unperformed. Independent review and final Metro are next; no GitHub write attempt.

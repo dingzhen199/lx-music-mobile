@@ -23,6 +23,8 @@ declare namespace LX {
       albumName: string // 歌曲专辑名称
       picUrl?: string | null // 歌曲图片链接
       toggleMusicInfo?: MusicInfoOnline | null
+      manualVersionPinned?: boolean
+      artists?: CatalogArtist[]
     }
 
     interface MusicInfoMeta_online extends MusicInfoMetaBase {
@@ -36,6 +38,8 @@ declare namespace LX {
       ext: string
     }
 
+
+    interface CatalogArtist { id: string | number, name: string }
 
     interface MusicInfoBase<S = LX.Source> {
       id: string

@@ -83,7 +83,8 @@ const List = forwardRef<ListType, ListProps>(({ onShowMenu, onMuiltSelectMode, o
       setSelectedList(list)
     },
     getSelectedList() {
-      return selectedListRef.current
+      const ids = new Set(selectedListRef.current.map(item => item.id))
+      return currentList.filter(item => ids.has(item.id))
     },
     scrollToInfo(info) {
       void getListMusics(listState.activeListId).then((list) => {

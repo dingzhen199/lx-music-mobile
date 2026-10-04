@@ -45,3 +45,7 @@ Fresh independent feature and source/runtime reviews rechecked prior findings an
 CI statements above are a pre-publication record. The branch's exact published SHA and its Actions result remain authoritative for remote compilation; no local native/device result is implied. No merge or release is included.
 
 Initial publication was blocked by the connected GitHub integration returning HTTP 403 on its first blob write. No feature ref or CI run was created at that attempt. Remote native compilation therefore remains unverified until repository write access is repaired and the branch is published. This access result does not invalidate the completed host checks.
+
+## Additional playback scope host checkpoint
+
+The new version/queue/catalog scope passes 65 host suites / 836 tests, full TypeScript checking, and original-rule lint for all changed production JS/TS files. New fixtures cover actual player queue consumption/URL commit, manual preview confirmation, A→B→A, completed-download offline priority, exact-source cache validation, provider pagination and React control close/late-result handling. Pure tests and mocked native-host component tests are explicitly distinct from device E2E. Prior Metro evidence belongs to 65a7832 and is not claimed for this new code. Fresh independent review and a new final Metro remain pending at this checkpoint.

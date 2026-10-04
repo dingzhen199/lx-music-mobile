@@ -33,6 +33,7 @@ export const toOldMusicInfo = (minfo: LX.Music.MusicInfo): any => {
     singer: minfo.singer,
     source: minfo.source,
     songmid: minfo.meta.songId,
+    artists: minfo.meta.artists?.map(artist => ({ ...artist })),
     interval: minfo.interval,
     albumName: minfo.meta.albumName,
     img: minfo.meta.picUrl ?? '',

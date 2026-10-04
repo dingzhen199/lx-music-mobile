@@ -1,3 +1,7 @@
+## 本分支：版本和播放队列
+
+手选版本保存在原收藏条目上。原版本不可用时只临时救急播放并提示，下次仍优先原选择；不会用替代音源覆盖收藏。队列窗口可查看实际下一首，多选播放按照界面行顺序播放所选曲目，结束后停止。艺人/专辑入口只显示准确 ID 对应目录；未支持的平台会说明，不用名称搜索冒充完整目录。详见 [支持范围与验证边界](docs/desktop-parity/playback-experience.md)。
+
 # lx-music-mobile 常见问题
 
 本文档已迁移至：<https://lyswhut.github.io/lx-music-doc/mobile/faq>

@@ -1,6 +1,5 @@
 import playerActions from '@/store/player/action'
-import listState from '@/store/list/state'
-import { writebackToggleMusicInfo } from '@/core/music/toggleWriteback'
+import { getPreferredVersion } from '@/core/music/versionPreference'
 import { isInitialized, initial as playerInitial, isEmpty, setPause, setPlay, setResource, setStop, initTrackInfo } from '@/plugins/player'
 import {
   setStatusText,
@@ -27,9 +26,9 @@ import { requestMsg } from '@/utils/message'
 import { getRandom } from '@/utils/common'
 import { filterList } from './utils'
 import BackgroundTimer from 'react-native-background-timer'
-import { checkIgnoringBatteryOptimization, checkNotificationPermission, debounceBackgroundTimer } from '@/utils/tools'
+import { checkIgnoringBatteryOptimization, checkNotificationPermission, debounceBackgroundTimer, toast } from '@/utils/tools'
 import { LIST_IDS } from '@/config/constant'
-import { addListMusics, removeListMusics, updateListMusicPosition } from '@/core/list'
+import { addListMusics, removeListMusics } from '@/core/list'
 import { addDislikeInfo } from '@/core/dislikeList'
 
 // import { checkMusicFileAvailable } from '@renderer/utils/music'
@@ -74,58 +73,31 @@ const diffCurrentMusicInfo = (curMusicInfo: LX.Music.MusicInfo | LX.Download.Lis
   return createGettingUrlId(curMusicInfo) != global.lx.gettingUrlId || curMusicInfo.id != playerState.playMusicInfo.musicInfo?.id || playerState.isPlay
 }
 
-const commitResolvedMusic = async(original: LX.Music.MusicInfo | LX.Download.ListItem, resolved: LX.Music.MusicInfoOnline) => {
-  if ('progress' in original || original.source === 'local') return
-  await writebackToggleMusicInfo(original, resolved, {
-    getContext: () => playerState.playMusicInfo,
-    isUserList: id => listState.allList.some(list => list.id === id),
-    getList: id => listState.allMusicList.get(id),
-    add: async(id, info) => { await addListMusics(id, [info], 'bottom') },
-    move: async(id, musicId, position) => { await updateListMusicPosition(id, position, [musicId]) },
-    remove: async(id, musicId) => { await removeListMusics(id, [musicId]) },
-    replaceCurrent: (id, from, to) => {
-      if (playerState.playMusicInfo.musicInfo !== from) return
-      playerActions.replacePlayMusicInfo(id, from, to)
-      setMusicInfo({ id: to.id, name: to.name, singer: to.singer, album: to.meta.albumName ?? '' })
-    },
-  })
-}
-
 let musicUrlRequestId = 0
 let musicUrlGeneration = 0
 const isStaleMusicUrlRequest = (musicInfo: LX.Music.MusicInfo | LX.Download.ListItem, requestId: number): boolean => {
   return requestId !== musicUrlRequestId || musicUrlGeneration !== playerState.playbackGeneration || global.lx.isPlayedStop || diffCurrentMusicInfo(musicInfo)
 }
 
-const getMusicPlayUrl = async(musicInfo: LX.Music.MusicInfo | LX.Download.ListItem, requestId: number, isRefresh = false, isRetryed = false, onResolvedMusicInfo?: (info: LX.Music.MusicInfoOnline) => void): Promise<string | null> => {
+const getMusicPlayUrl = async(musicInfo: LX.Music.MusicInfo | LX.Download.ListItem, requestId: number, isRefresh = false, isRetryed = false, onResolvedMusicInfo?: (info: LX.Music.MusicInfoOnline) => void, onFallback?: () => void): Promise<string | null> => {
   // this.musicInfo.url = await getMusicPlayUrl(targetSong, type)
   setStatusText(global.i18n.t('player__getting_url'))
   addLoadTimeout()
 
-  // const type = getPlayType(appSetting['player.highQuality'], musicInfo)
-  let toggleMusicInfo = ('progress' in musicInfo ? musicInfo.metadata.musicInfo : musicInfo).meta.toggleMusicInfo
-
-  return (toggleMusicInfo ? getMusicUrl({
-    musicInfo: toggleMusicInfo,
+  return getMusicUrl({
+    musicInfo,
     isRefresh,
-    allowToggleSource: false,
+    alternativeMusicInfos: musicInfo === playerState.playMusicInfo.musicInfo ? playerState.playMusicInfo.alternativeMusicInfos : undefined,
     onResolvedMusicInfo,
-  }) : Promise.reject(new Error('not found'))).catch(async() => {
-    if (isStaleMusicUrlRequest(musicInfo, requestId)) return null
-    return getMusicUrl({
-      musicInfo,
-      isRefresh,
-      alternativeMusicInfos: musicInfo === playerState.playMusicInfo.musicInfo ? playerState.playMusicInfo.alternativeMusicInfos : undefined,
-      onResolvedMusicInfo,
-      onToggleSource(mInfo) {
-        if (isStaleMusicUrlRequest(musicInfo, requestId)) return
-        setStatusText(global.i18n.t('toggle_source_try'))
-      },
-      onToggleApiSource() {
-        if (isStaleMusicUrlRequest(musicInfo, requestId)) return
-        setStatusText(global.i18n.t('setting_basic_source_backup'))
-      },
-    })
+    onToggleSource(mInfo) {
+      if (isStaleMusicUrlRequest(musicInfo, requestId)) return
+      onFallback?.()
+      setStatusText(global.i18n.t('toggle_source_try'))
+    },
+    onToggleApiSource() {
+      if (isStaleMusicUrlRequest(musicInfo, requestId)) return
+      setStatusText(global.i18n.t('setting_basic_source_backup'))
+    },
   }).then(url => {
     if (isStaleMusicUrlRequest(musicInfo, requestId)) return null
 
@@ -137,7 +109,7 @@ const getMusicPlayUrl = async(musicInfo: LX.Music.MusicInfo | LX.Download.ListIt
       err.message == requestMsg.cancelRequest) return null
 
     // 429 不再等待重试同源：音源轮换已在取流链内完成（ADR-0003）
-    if (!isRetryed) return getMusicPlayUrl(musicInfo, requestId, isRefresh, true, onResolvedMusicInfo)
+    if (!isRetryed) return getMusicPlayUrl(musicInfo, requestId, isRefresh, true, onResolvedMusicInfo, onFallback)
 
     throw err
   })
@@ -150,12 +122,17 @@ export const setMusicUrl = (musicInfo: LX.Music.MusicInfo | LX.Download.ListItem
   const requestId = ++musicUrlRequestId
   musicUrlGeneration = playerState.playbackGeneration
   let resolvedMusicInfo: LX.Music.MusicInfoOnline | undefined
-  void getMusicPlayUrl(musicInfo, requestId, isRefresh, false, info => { resolvedMusicInfo = info }).then((url) => {
+  let fallbackAttempted = false
+  void getMusicPlayUrl(musicInfo, requestId, isRefresh, false, info => { resolvedMusicInfo = info }, () => { fallbackAttempted = true }).then((url) => {
     if (!url || isStaleMusicUrlRequest(musicInfo, requestId)) return
     setResource(musicInfo, url, playerState.progress.nowPlayTime)
-    // 先接受本次 URL，再写回身份；否则取流的过期检查会误丢弃刚换源成功的结果。
-    if (resolvedMusicInfo && 'source' in musicInfo && musicInfo.source !== 'local') {
-      void commitResolvedMusic(musicInfo, resolvedMusicInfo).catch(err => { console.log(err) })
+    if (resolvedMusicInfo) {
+      playerActions.setResolvedMusicInfo(resolvedMusicInfo)
+      const original = 'progress' in musicInfo ? musicInfo.metadata.musicInfo : musicInfo
+      if (getPreferredVersion(original).id !== resolvedMusicInfo.id) toast(global.i18n.t('playback_rescue_notice'), 'long')
+    } else if (fallbackAttempted) {
+      playerActions.setTemporarySourceUnknown()
+      toast(global.i18n.t('playback_rescue_notice'), 'long')
     }
   }).catch((err: any) => {
     if (isStaleMusicUrlRequest(musicInfo, requestId)) return
@@ -298,6 +275,17 @@ const handlePlay = async() => {
 export const playMusicInfoNow = (musicInfo: LX.Player.PlayMusic, listId: string | null = null, alternativeMusicInfos?: LX.Music.MusicInfoOnline[]) => {
   setPlayMusicInfo(listId, musicInfo, true, { alternativeMusicInfos })
   void handlePlay()
+}
+
+/** Explicit selections use the existing FIFO queue and never continue an old playlist. */
+export const playSelectedList = (list: LX.Player.PlayMusic[], listId: string | null = null) => {
+  if (!list.length) return
+  clearTempPlayeList()
+  clearPlayedList()
+  resetRandomNextMusicInfo()
+  setPlayListId(null)
+  playerActions.addTempPlayList(list.slice(1).map(musicInfo => ({ musicInfo, listId })))
+  playMusicInfoNow(list[0], listId)
 }
 
 export const playListById = async(listId: string, id: string) => {

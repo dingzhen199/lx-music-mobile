@@ -122,9 +122,16 @@ it('跨提供方回退命中当前音质缓存时不再取流', async() => {
 })
 
 it('跨提供方候选的缓存也透传最终提供方身份', async() => {
-  const resolved = { ...musicInfo, id: 'kw_resolved', source: 'kw' }
+  const resolved = musicInfo
   mocks.cachedUrl.mockResolvedValue({ url: 'cached-url', musicInfo: resolved })
   await expect(getOnlineOtherSourceMusicUrl({ musicInfos: [musicInfo], isRefresh: false, onToggleSource: vi.fn() }))
     .resolves.toMatchObject({ url: 'cached-url', musicInfo: resolved, isFromCache: true })
   expect(mocks.backup).not.toHaveBeenCalled()
+})
+
+it('rejects legacy cache aliases when resolving another provider candidate', async() => {
+  mocks.cachedUrl.mockResolvedValue({ url: 'wrong-alias', musicInfo: { ...musicInfo, id: 'other' } })
+  await expect(getOnlineOtherSourceMusicUrl({ musicInfos: [musicInfo], isRefresh: false, onToggleSource: vi.fn() }))
+    .resolves.toMatchObject({ url: 'https://example.test/audio', musicInfo })
+  expect(mocks.backup).toHaveBeenCalled()
 })

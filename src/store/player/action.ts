@@ -24,6 +24,14 @@ export default {
 
     global.state_event.playMusicInfoChanged(state.playMusicInfo)
   },
+  setTemporarySourceUnknown() {
+    state.playMusicInfo = { ...state.playMusicInfo, temporarySourceUnknown: true }
+    global.state_event.playMusicInfoChanged(state.playMusicInfo)
+  },
+  setResolvedMusicInfo(resolvedMusicInfo: LX.Music.MusicInfoOnline) {
+    state.playMusicInfo = { ...state.playMusicInfo, resolvedMusicInfo }
+    global.state_event.playMusicInfoChanged(state.playMusicInfo)
+  },
   replacePlayMusicInfo(listId: string, original: LX.Music.MusicInfoOnline, resolved: LX.Music.MusicInfoOnline) {
     if (state.playMusicInfo.listId !== listId || state.playMusicInfo.musicInfo !== original) return
     state.playMusicInfo = { ...state.playMusicInfo, musicInfo: resolved }

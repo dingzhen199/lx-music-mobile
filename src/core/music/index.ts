@@ -1,3 +1,4 @@
+import { getPreferredVersion } from './versionPreference'
 // if (targetSong.key) { // 如果是已下载的歌曲
 //   const filePath = path.join(appSetting['download.savePath'], targetSong.metadata.fileName)
 //   // console.log(filePath)
@@ -38,10 +39,11 @@ export const getMusicUrl = async({
   onResolvedMusicInfo?: (musicInfo: LX.Music.MusicInfoOnline) => void
   alternativeMusicInfos?: LX.Music.MusicInfoOnline[]
 }): Promise<string> => {
+  if (!('progress' in musicInfo)) musicInfo = getPreferredVersion(musicInfo)
   if ('progress' in musicInfo) {
     return getDownloadMusicUrl({ musicInfo, isRefresh, onToggleSource, onToggleApiSource, allowToggleSource, onResolvedMusicInfo })
   } else if (musicInfo.source == 'local') {
-    return getLocalMusicUrl({ musicInfo, isRefresh, onToggleSource, allowToggleSource })
+    return getLocalMusicUrl({ musicInfo, isRefresh, onToggleSource, allowToggleSource, onResolvedMusicInfo })
   } else {
     return getOnlineMusicUrl({ musicInfo, isRefresh, quality, onToggleSource, onToggleApiSource, allowToggleSource, onResolvedMusicInfo, alternativeMusicInfos })
   }
@@ -58,6 +60,7 @@ export const getPicPath = async({
   isRefresh?: boolean
   onToggleSource?: (musicInfo?: LX.Music.MusicInfoOnline) => void
 }): Promise<string> => {
+  if (!('progress' in musicInfo)) musicInfo = getPreferredVersion(musicInfo)
   if ('progress' in musicInfo) {
     return getDownloadPicUrl({ musicInfo, isRefresh, listId, onToggleSource })
   } else if (musicInfo.source == 'local') {
@@ -76,6 +79,7 @@ export const getLyricInfo = async({
   isRefresh?: boolean
   onToggleSource?: (musicInfo?: LX.Music.MusicInfoOnline) => void
 }): Promise<LX.Player.LyricInfo> => {
+  if (!('progress' in musicInfo)) musicInfo = getPreferredVersion(musicInfo)
   if ('progress' in musicInfo) {
     return getDownloadLyricInfo({ musicInfo, isRefresh, onToggleSource })
   } else if (musicInfo.source == 'local') {

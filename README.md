@@ -2,6 +2,7 @@
 
 本分支以桌面 `feat/aggregate-recommendation-playlist-import` 的固定提交 `df3e97915d40bd7b9efceb8421a120637b0c4617` 为参考，加入：
 
+- 手选版本保护、进度旁播放队列、多选顺序修复、艺人/专辑目录入口（支持范围见 [说明](docs/desktop-parity/playback-experience.md)）
 - 平台聚合推荐（默认不调用 AI）、AI/本地探索电台、连续续补、反馈、路径和本地画像
 - 有序主/备自定义音源、独立运行时与初始化超时，导入/删除持久化失败保护
 - 歌单链接平台识别、原始来源信息保存、启动自动更新与手动更新管理

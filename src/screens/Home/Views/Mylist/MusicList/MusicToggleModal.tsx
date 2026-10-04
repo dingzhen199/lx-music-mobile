@@ -1,3 +1,4 @@
+import { getPreferredVersion } from '@/core/music/versionPreference'
 import { useRef, useImperativeHandle, forwardRef, useState, useCallback, memo, useEffect } from 'react'
 import Text from '@/components/common/Text'
 import { createStyle } from '@/utils/tools'
@@ -301,6 +302,7 @@ const Modal = forwardRef<ModalType, {}>((props, ref) => {
     error: boolean
   }>({ sourceInfo: [], lists: {}, loading: false, error: false })
   const [source, setSource] = useState<LX.OnlineSource | ''>('')
+  const requestRevision = useRef(0)
   const dialogRef = useRef<DialogType>(null)
   const isUnmountedRef = useUnmounted()
   const [toggleSource, setToggleSource] = useState<LX.Music.MusicInfoOnline | null>(null)
@@ -313,29 +315,38 @@ const Modal = forwardRef<ModalType, {}>((props, ref) => {
   }, [])
 
   const loadData = useCallback((selectInfo: SelectInfo = infoRef.current) => {
+    const request = ++requestRevision.current
     setSourceInfo({ sourceInfo: [], lists: {}, loading: true, error: false })
+    const preferred = getPreferredVersion(selectInfo.musicInfo)
     searchMusic({
-      name: selectInfo.musicInfo.name,
-      singer: selectInfo.musicInfo.singer,
+      name: preferred.name,
+      singer: preferred.singer,
       source: '',
     }).then((result: Array<{ source: LX.OnlineSource, list: LX.Music.MusicInfoOnline[] }>) => {
-      if (isUnmountedRef.current) return
+      if (isUnmountedRef.current || request !== requestRevision.current) return
       const tags: LX.OnlineSource[] = []
       const lists: Partial<Record<LX.OnlineSource, LX.Music.MusicInfoOnline[]>> = {}
       for (const s of result) {
         tags.push(s.source)
         lists[s.source] = s.list.map(s => toNewMusicInfo(s) as LX.Music.MusicInfoOnline)
       }
+      const original = selectInfo.musicInfo
+      if (original.source !== 'local') {
+        if (!tags.includes(original.source)) tags.unshift(original.source)
+        const list = lists[original.source] ?? []
+        lists[original.source] = [original, ...list.filter(item => item.id !== original.id)]
+      }
       setSourceInfo({ sourceInfo: tags, lists, loading: false, error: false })
       if (tags.length) setSource(tags[0])
     }).catch(() => {
-      if (isUnmountedRef.current) return
-      setSourceInfo({ ...sourceInfo, error: true })
+      if (isUnmountedRef.current || request !== requestRevision.current) return
+      setSourceInfo({ sourceInfo: [], lists: {}, loading: false, error: true })
     })
-  }, [isUnmountedRef, sourceInfo])
+  }, [isUnmountedRef])
   useImperativeHandle(ref, () => ({
     show(info) {
       infoRef.current = info
+      setToggleSource(null)
       setSource('')
       loadData(info)
       requestAnimationFrame(() => {
@@ -350,7 +361,7 @@ const Modal = forwardRef<ModalType, {}>((props, ref) => {
   }, [])
 
   return (
-    <Dialog ref={dialogRef}>
+    <Dialog ref={dialogRef} onHide={() => { requestRevision.current++; setToggleSource(null) }}>
       <View style={styles.container}>
         {
           sourceInfo.sourceInfo.length
@@ -368,7 +379,12 @@ const Modal = forwardRef<ModalType, {}>((props, ref) => {
               </>)
             : <Empty loading={sourceInfo.loading} error={sourceInfo.error} onReload={loadData} />
         }
-        <SourceDetail info={infoRef.current.musicInfo} onConfirm={confirmToggleSource} toggleSource={toggleSource} />
+        {infoRef.current.musicInfo ? <>
+          <SourceDetail info={getPreferredVersion(infoRef.current.musicInfo)} onConfirm={confirmToggleSource} toggleSource={toggleSource} />
+          {infoRef.current.musicInfo.source !== 'local' && getPreferredVersion(infoRef.current.musicInfo).id !== infoRef.current.musicInfo.id
+            ? <Button onPress={() => { void confirmToggleSource(infoRef.current.musicInfo as LX.Music.MusicInfoOnline) }}><Text>{global.i18n.t('playback_restore_original')}</Text></Button>
+            : null}
+        </> : null}
       </View>
     </Dialog>
   )

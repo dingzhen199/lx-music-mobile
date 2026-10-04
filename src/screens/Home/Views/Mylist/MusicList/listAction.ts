@@ -1,5 +1,6 @@
+import { selectManualVersion } from '@/core/music/versionPreference'
 import { addListMusics, removeListMusics, updateListMusicPosition, updateListMusics } from '@/core/list'
-import { playList, playListById, playNext } from '@/core/player/player'
+import { playList, playListById, playNext, playSelectedList } from '@/core/player/player'
 import { addTempPlayList } from '@/core/player/tempPlayList'
 import settingState from '@/store/setting/state'
 import { similar, sortInsert, toOldMusicInfo } from '@/utils'
@@ -13,7 +14,8 @@ import musicSdk from '@/utils/musicSdk'
 import { getListMusicSync } from '@/utils/listManage'
 import { clearMusicUrlByMusic } from '@/utils/data'
 
-export const handlePlay = (listId: SelectInfo['listId'], index: SelectInfo['index']) => {
+export const handlePlay = (listId: SelectInfo['listId'], index: SelectInfo['index'], selectedList: SelectInfo['selectedList'] = []) => {
+  if (selectedList.length) { playSelectedList(selectedList, listId); return }
   void playList(listId, index)
 }
 export const handlePlayLater = (listId: SelectInfo['listId'], musicInfo: SelectInfo['musicInfo'], selectedList: SelectInfo['selectedList'], onCancelSelect: () => void) => {
@@ -145,31 +147,11 @@ export const handleDislikeMusic = async(musicInfo: SelectInfo['musicInfo']) => {
 }
 
 export const handleToggleSource = async(listId: string, musicInfo: LX.Music.MusicInfo, toggleMusicInfo: LX.Music.MusicInfoOnline) => {
-  const list = getListMusicSync(listId)
-  const oldId = musicInfo.id
-  let oldIdx = list.findIndex(m => m.id == oldId)
-  if (oldIdx < 0) {
-    void addListMusics(listId, [toggleMusicInfo], settingState.setting['list.addMusicLocationType'])
-    return true
-  }
-  const id = toggleMusicInfo.id
-  const index = list.findIndex(m => m.id == id)
-  const removeIds = [oldId]
-  if (index > -1) {
-    if (!await confirmDialog({
-      message: global.i18n.t('music_toggle__duplicate_tip'),
-      cancelButtonText: global.i18n.t('dialog_cancel'),
-      confirmButtonText: global.i18n.t('dialog_confirm'),
-    })) return false
-    removeIds.push(id)
-  }
-  void removeListMusics(listId, removeIds).then(async() => {
-    await addListMusics(listId, [toggleMusicInfo], 'bottom')
-    if (index != -1 && index < oldIdx) oldIdx--
-    await updateListMusicPosition(listId, oldIdx, [id])
-    if (playerState.playMusicInfo.listId == listId && playerState.playMusicInfo.musicInfo?.id == oldId) {
-      void playListById(listId, toggleMusicInfo.id)
-    }
-  })
+  const original = getListMusicSync(listId).find(item => item.id === musicInfo.id) ?? musicInfo
+  const pinned = selectManualVersion(original, toggleMusicInfo)
+  if (getListMusicSync(listId).some(item => item.id === original.id)) await updateListMusics([{ id: listId, musicInfo: pinned }])
+  else await addListMusics(listId, [pinned], settingState.setting['list.addMusicLocationType'])
+  const current = playerState.playMusicInfo
+  if ((current.listId === listId && current.musicInfo?.id === original.id) || (current.isTempPlay && current.musicInfo === toggleMusicInfo)) void playListById(listId, original.id)
   return true
 }

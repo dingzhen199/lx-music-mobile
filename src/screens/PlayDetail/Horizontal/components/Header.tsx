@@ -1,10 +1,10 @@
+import CatalogLinks from '@/components/player/CatalogLinks'
 import { memo, useRef } from 'react'
 
 import { View, StyleSheet, TouchableOpacity } from 'react-native'
 
 import { Icon } from '@/components/common/Icon'
 import { pop } from '@/navigation'
-import { useTheme } from '@/store/theme/hook'
 import { usePlayerMusicInfo } from '@/store/player/hook'
 import Text from '@/components/common/Text'
 import { scaleSizeH } from '@/utils/pixelRatio'
@@ -18,14 +18,13 @@ import DesktopLyricBtn from './DesktopLyricBtn'
 export const HEADER_HEIGHT = scaleSizeH(_HEADER_HEIGHT)
 
 const Title = () => {
-  const theme = useTheme()
   const musicInfo = usePlayerMusicInfo()
 
 
   return (
     <View style={styles.titleContent}>
       <Text numberOfLines={1} style={styles.title} size={14}>{musicInfo.name}</Text>
-      <Text numberOfLines={1} style={styles.title} size={12} color={theme['c-font-label']}>{musicInfo.singer}</Text>
+      <CatalogLinks />
     </View>
   )
 }

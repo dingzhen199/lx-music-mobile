@@ -15,6 +15,8 @@ export interface InitState {
      * 是否属于 “稍后播放”
      */
     isTempPlay: boolean
+    temporarySourceUnknown?: boolean
+    resolvedMusicInfo?: LX.Music.MusicInfoOnline
     alternativeMusicInfos?: LX.Music.MusicInfoOnline[]
     recommendationSessionId?: number
   }

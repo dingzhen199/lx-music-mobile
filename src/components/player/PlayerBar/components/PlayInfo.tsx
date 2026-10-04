@@ -1,3 +1,4 @@
+import QueueButton from '@/components/player/QueueButton'
 import { memo, useCallback, useState } from 'react'
 import { View, StyleSheet } from 'react-native'
 
@@ -59,6 +60,7 @@ export default ({ isHome }: { isHome: boolean }) => {
             : <ProgressPlain progress={progress} duration={maxPlayTime} buffered={buffered} paddingTop={PADDING_TOP_PROGRESS} />
         }
       </View>
+      <QueueButton />
     </View>
   )
 }
@@ -110,5 +112,6 @@ const stylesRaw = StyleSheet.create({
     // paddingVertical: 2,
     marginBottom: MARGIN_TOP,
     zIndex: 100,
+    right: scaleSizeW(48),
   },
 })
