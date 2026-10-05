@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - feat/desktop-parity-20261003
+      - fix/mobile-queue-catalog-20261005
   pull_request:
     branches:
       - dev

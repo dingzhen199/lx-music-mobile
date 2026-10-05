@@ -213,3 +213,9 @@ Reviewed every active asynchronous read, delayed callback and lifecycle listener
 
 - Cycle 9 focused and full reviews approve source/host scope with no verified major/minor findings. Full review independently reran 1,037 tests, native 16, typecheck, lint and production Metro; focused review added 29 external boundary probes. Reports are saved under docs/desktop-parity/reviews/2026-10-05-queue-catalog. Approved code candidate SHA256: e4b705c4ea1456afef1038d5a906814ac2835a3a8b458bb15e4b28a312a3a691.
 - Delivery uses the isolated fix/mobile-queue-catalog-20261005 branch. Existing push CI filters cover feat/desktop-parity-20261003, master and beta; this fix branch is outside those filters. Local/independent host gates do not establish remote CI or APK/device acceptance.
+
+### Enable build checks for the queue/catalog fix branch
+
+- Add only fix/mobile-queue-catalog-20261005 to the existing build-test push branch filter; retain feat/desktop-parity-20261003 and pull requests targeting dev. Existing npm ci, unit tests, typecheck, lint, Metro build-test and Android debug assembly commands and read-only permissions are unchanged. Release/deployment workflows are unchanged.
+- Locally reran the actual workflow commands available here: npm test (1,037 passed), npm run typecheck, npm run lint, npm run build-test -- --max-workers 1; all exit 0. This repository has no test:ci script. Generated bundle/assets are preserved outside the checkout.
+- npm ci was not repeated over the authorized restored dependency artifacts. Android debug assembly is not locally verified: this environment has Java 21, no configured/discovered Android SDK, adb or sdkmanager; workflow uses Java 17 and the GitHub runner SDK. Debug signing uses the existing debug keystore and needs no private release-signing secret. Remote exact-commit CI verification is pending this isolated workflow patch review and push.
