@@ -38,7 +38,7 @@ describe('ID-based catalog adapter', () => {
     input.meta.artists = [{ id: 0, name: 'Unknown' }]
     const adapter = createCatalogAdapter({ wy: { artist: vi.fn(), detail: async() => null } })
     await expect(adapter.resolve('artist', input)).rejects.toMatchObject({ code: 'metadata' })
-    await expect(adapter.resolve('album', input)).rejects.toMatchObject({ code: 'unsupported' })
+    await expect(adapter.resolve('album', input)).rejects.toMatchObject({ code: 'not-integrated' })
   })
   it('resolves an album by its provider ID even for a compilation', async() => {
     const input = { ...music(), source: 'kw' as const }

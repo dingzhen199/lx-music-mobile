@@ -1,6 +1,8 @@
 export interface InitState {
+  queueSession: { listId: string, list: LX.Player.PlayMusic[] } | null
   exclusiveBatch: boolean
   playbackGeneration: number
+  resourceOperationId: number
   resourceMusicId: string | null
   resourceTrackId: string | null
   playMusicInfo: {
@@ -47,8 +49,10 @@ export interface InitState {
 }
 
 const state: InitState = {
+  queueSession: null,
   exclusiveBatch: false,
   playbackGeneration: 0,
+  resourceOperationId: 0,
   resourceMusicId: null,
   resourceTrackId: null,
   playInfo: {

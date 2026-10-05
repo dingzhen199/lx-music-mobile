@@ -12,6 +12,7 @@ export default {
     global.state_event.playInfoChanged({ ...state.playInfo })
   },
   setPlayListId(playerListId: string | null) {
+    if (state.queueSession?.listId !== playerListId) state.queueSession = null
     state.playInfo.playerListId = playerListId
 
     global.state_event.playInfoChanged({ ...state.playInfo })
@@ -111,6 +112,7 @@ export default {
     global.state_event.playTempPlayListChanged({ ...state.tempPlayList })
   },
   updateQueuedVersion(listId: string, musicInfo: LX.Music.MusicInfo) {
+    if (state.queueSession?.listId === listId) state.queueSession.list = state.queueSession.list.map(item => item.id === musicInfo.id ? musicInfo : item)
     state.tempPlayList = state.tempPlayList.map(item => item.listId === listId && item.musicInfo.id === musicInfo.id ? { ...item, musicInfo } : item)
     global.state_event.playTempPlayListChanged({ ...state.tempPlayList })
   },

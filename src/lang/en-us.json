@@ -585,5 +585,14 @@
   "catalog_invalid_response": "Invalid catalog response",
   "catalog_load_error": "Catalog failed to load; please retry",
   "catalog_no_new_songs": "No new songs returned. Retry; loaded songs remain available.",
-  "playback_batch_radio_paused": "Playing only this selection; recommendations are paused. Playback stops at its end. Play a regular list or start a new station to resume."
+  "playback_batch_radio_paused": "Playing only this selection; recommendations are paused. Playback stops at its end. Play a regular list or start a new station to resume.",
+  "playback_play_next": "Play next",
+  "playback_move_up": "Move up",
+  "playback_move_down": "Move down",
+  "playback_remove": "Remove from queue",
+  "playback_clear": "Clear queue",
+  "playback_clear_confirm": "Clear pending songs and playlist continuation? The current song will finish, then playback will stop. Saved playlists are unchanged.",
+  "playback_action_failed": "Action failed. Please try again.",
+  "catalog_song_actions": "Song actions",
+  "catalog_not_integrated": "This catalog is not yet integrated in the app; provider support has not been ruled out."
 }

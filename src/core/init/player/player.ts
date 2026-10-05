@@ -9,15 +9,18 @@ import settingState from '@/store/setting/state'
 
 
 export default async(setting: LX.AppSetting) => {
-  const setPlayStatus = () => {
+  const setPlayStatus = (generation = playerState.playbackGeneration) => {
+    if (generation !== playerState.playbackGeneration) return
     setIsPlay(true)
   }
-  const setPauseStatus = () => {
+  const setPauseStatus = (generation = playerState.playbackGeneration) => {
+    if (generation !== playerState.playbackGeneration) return
     setIsPlay(false)
     if (global.lx.isPlayedStop) void pause()
   }
 
-  const handleEnded = () => {
+  const handleEnded = (generation = playerState.playbackGeneration) => {
+    if (generation !== playerState.playbackGeneration) return
     // setTimeout(() => {
     if (global.lx.isPlayedStop) {
       setStatusText(global.i18n.t('player__end'))
@@ -31,13 +34,15 @@ export default async(setting: LX.AppSetting) => {
     // })
   }
 
-  const setStopStatus = () => {
+  const setStopStatus = (generation = playerState.playbackGeneration, nativeStopped = false) => {
+    if (generation !== playerState.playbackGeneration) return
     setIsPlay(false)
     setStatusText('')
-    void setStop()
+    if (!nativeStopped) void setStop()
   }
 
-  const updatePic = () => {
+  const updatePic = (generation = playerState.playbackGeneration) => {
+    if (generation !== playerState.playbackGeneration) return
     if (!settingState.setting['player.isShowNotificationImage']) return
     if (playerState.playMusicInfo.musicInfo && playerState.musicInfo.pic) {
       delayUpdateMusicInfo(playerState.musicInfo)

@@ -1,6 +1,7 @@
 import { setNavActiveId } from '@/core/common'
 import Event from './Event'
 import commonState from '@/store/common/state'
+import playerState from '@/store/player/state'
 import { type Source as SonglistSource } from '@/store/songlist/state'
 import { type SearchType } from '@/store/search/state'
 
@@ -15,6 +16,15 @@ import { type SearchType } from '@/store/search/state'
 // }
 
 export class AppEvent extends Event {
+  private emitPlayback(eventName: string, generation: number, ...args: unknown[]) {
+    if (generation !== playerState.playbackGeneration) return
+    this.emit(eventName, ...args, generation)
+  }
+
+  private emitNativePlayback(eventName: string, generation: number, isResourceCurrent?: () => boolean) {
+    this.emitGuarded(eventName, () => generation === playerState.playbackGeneration && (!isResourceCurrent || isResourceCurrent()), generation)
+  }
+
   // configUpdate() {
   //   this.emit('configUpdate')
   // }
@@ -40,16 +50,16 @@ export class AppEvent extends Event {
   /**
    * 音乐信息切换
    */
-  musicToggled(reason: 'user' | 'ended' | 'error' | 'removed' = 'user') {
-    this.emit('musicToggled', reason)
+  musicToggled(reason: 'user' | 'ended' | 'error' | 'removed' = 'user', generation = playerState.playbackGeneration) {
+    this.emitPlayback('musicToggled', generation, reason)
   }
 
   /**
    * 手动改变进度
    * @param progress 进度
    */
-  setProgress(progress: number, maxPlayTime?: number) {
-    this.emit('setProgress', progress, maxPlayTime)
+  setProgress(progress: number, maxPlayTime?: number, generation = playerState.playbackGeneration) {
+    this.emitPlayback('setProgress', generation, progress, maxPlayTime)
   }
 
   /**
@@ -69,76 +79,79 @@ export class AppEvent extends Event {
   }
 
   // 播放器事件
-  play() {
-    this.emit('play')
+  play(generation = playerState.playbackGeneration, isResourceCurrent?: () => boolean) {
+    this.emitNativePlayback('play', generation, isResourceCurrent)
   }
 
-  pause() {
-    this.emit('pause')
+  pause(generation = playerState.playbackGeneration, isResourceCurrent?: () => boolean) {
+    this.emitNativePlayback('pause', generation, isResourceCurrent)
   }
 
-  stop() {
-    this.emit('stop')
+  stop(generation = playerState.playbackGeneration, nativeStopped = false) {
+    if (generation !== playerState.playbackGeneration) return
+    const operationId = playerState.resourceOperationId
+    this.emitGuarded('stop', () => (generation === playerState.playbackGeneration || !playerState.playMusicInfo.musicInfo) &&
+      (!nativeStopped || operationId === playerState.resourceOperationId), generation, nativeStopped)
   }
 
-  error() {
-    this.emit('error')
+  error(generation = playerState.playbackGeneration, isResourceCurrent?: () => boolean) {
+    this.emitNativePlayback('error', generation, isResourceCurrent)
   }
 
   // 播放器原始事件
-  playerPlaying() {
-    this.emit('playerPlaying')
+  playerPlaying(generation = playerState.playbackGeneration, isResourceCurrent?: () => boolean) {
+    this.emitNativePlayback('playerPlaying', generation, isResourceCurrent)
   }
 
-  playerPause() {
-    this.emit('playerPause')
+  playerPause(generation = playerState.playbackGeneration, isResourceCurrent?: () => boolean) {
+    this.emitNativePlayback('playerPause', generation, isResourceCurrent)
   }
 
   // playerStop() {
   //   this.emit('playerStop')
   // }
 
-  playerEnded() {
-    this.emit('playerEnded')
+  playerEnded(generation = playerState.playbackGeneration, isResourceCurrent?: () => boolean) {
+    this.emitNativePlayback('playerEnded', generation, isResourceCurrent)
   }
 
-  playerError() {
-    this.emit('playerError')
+  playerError(generation = playerState.playbackGeneration, isResourceCurrent?: () => boolean) {
+    this.emitNativePlayback('playerError', generation, isResourceCurrent)
   }
 
-  playerLoadeddata() {
-    this.emit('playerLoadeddata')
+  playerLoadeddata(generation = playerState.playbackGeneration, isResourceCurrent?: () => boolean) {
+    this.emitNativePlayback('playerLoadeddata', generation, isResourceCurrent)
   }
 
   loveListMusicsAdded(musics: LX.Music.MusicInfo[]) {
     this.emit('loveListMusicsAdded', musics)
   }
 
-  playerLoadstart() {
-    this.emit('playerLoadstart')
+  playerLoadstart(generation = playerState.playbackGeneration, isResourceCurrent?: () => boolean) {
+    this.emitNativePlayback('playerLoadstart', generation, isResourceCurrent)
   }
 
   // playerCanplay() {
   //   this.emit('playerCanplay')
   // }
 
-  playerEmptied() {
-    this.emit('playerEmptied')
+  playerEmptied(generation = playerState.playbackGeneration, isResourceCurrent?: () => boolean) {
+    this.emitNativePlayback('playerEmptied', generation, isResourceCurrent)
   }
 
-  playerWaiting() {
-    this.emit('playerWaiting')
+  playerWaiting(generation = playerState.playbackGeneration, isResourceCurrent?: () => boolean) {
+    this.emitNativePlayback('playerWaiting', generation, isResourceCurrent)
   }
 
 
   // 更新图片事件
-  picUpdated() {
-    this.emit('picUpdated')
+  picUpdated(generation = playerState.playbackGeneration) {
+    this.emitPlayback('picUpdated', generation)
   }
 
   // 更新歌词事件
-  lyricUpdated() {
-    this.emit('lyricUpdated')
+  lyricUpdated(generation = playerState.playbackGeneration) {
+    this.emitPlayback('lyricUpdated', generation)
   }
 
   // 更新歌词偏移

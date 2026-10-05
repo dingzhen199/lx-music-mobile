@@ -33,8 +33,10 @@ export const init = async() => {
  * @param translation lyric translation
  */
 const handleSetLyric = async(lyric: string, translation = '', romalrc = '') => {
+  const generation = playerState.playbackGeneration
   lrcSetLyric(lyric, translation, romalrc)
   await setDesktopLyric(lyric, translation, romalrc)
+  if (generation !== playerState.playbackGeneration) return
   if (settingState.setting['player.isShowBluetoothFullLyric']) {
     void updateNowPlayingTitles({
       lyric,
@@ -71,14 +73,12 @@ export const stop = () => {
  * @param playbackRate playback rate
  */
 export const setPlaybackRate = async(playbackRate: number) => {
+  const generation = playerState.playbackGeneration
   lrcSetPlaybackRate(playbackRate)
   await setDesktopLyricPlaybackRate(playbackRate)
+  if (generation !== playerState.playbackGeneration) return
   if (playerState.isPlay) {
-    setTimeout(() => {
-      void getPosition().then((position) => {
-        handlePlay(position * 1000)
-      })
-    })
+    setTimeout(() => { play(generation) })
   }
 }
 
@@ -87,9 +87,11 @@ export const setPlaybackRate = async(playbackRate: number) => {
  * @param isShowTranslation is show translation
  */
 export const toggleTranslation = async(isShowTranslation: boolean) => {
+  const generation = playerState.playbackGeneration
   lrcToggleTranslation(isShowTranslation)
   await toggleDesktopLyricTranslation(isShowTranslation)
-  if (playerState.isPlay) play()
+  if (generation !== playerState.playbackGeneration) return
+  if (playerState.isPlay) play(generation)
 }
 
 /**
@@ -97,19 +99,24 @@ export const toggleTranslation = async(isShowTranslation: boolean) => {
  * @param isShowLyricRoma is show roma lyric
  */
 export const toggleRoma = async(isShowLyricRoma: boolean) => {
+  const generation = playerState.playbackGeneration
   lrcToggleRoma(isShowLyricRoma)
   await toggleDesktopLyricRoma(isShowLyricRoma)
-  if (playerState.isPlay) play()
+  if (generation !== playerState.playbackGeneration) return
+  if (playerState.isPlay) play(generation)
 }
 
-export const play = () => {
+export const play = (generation = playerState.playbackGeneration) => {
+  if (generation !== playerState.playbackGeneration || !playerState.isPlay) return
   void getPosition().then((position) => {
+    if (generation !== playerState.playbackGeneration || !playerState.isPlay) return
     handlePlay(position * 1000)
-  })
+  }).catch(() => {})
 }
 
 
 export const setLyric = async() => {
+  const generation = playerState.playbackGeneration
   if (!playerState.musicInfo.id) return
   if (playerState.musicInfo.lrc) {
     let tlrc = ''
@@ -119,5 +126,6 @@ export const setLyric = async() => {
     await handleSetLyric(playerState.musicInfo.lrc, tlrc, rlrc)
   }
 
-  if (playerState.isPlay) play()
+  if (generation !== playerState.playbackGeneration) return
+  if (playerState.isPlay) play(generation)
 }

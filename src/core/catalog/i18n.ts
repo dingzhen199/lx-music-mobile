@@ -2,6 +2,7 @@ const fallback = {
   catalog_album: '专辑',
   catalog_artist_songs: '艺人歌曲',
   catalog_album_songs: '专辑歌曲',
+  catalog_not_integrated: '应用尚未接入此来源的该类目录，不能据此判断平台不支持',
   catalog_unsupported: '当前提供方暂不支持此目录',
   catalog_album_missing: '缺少准确的专辑 ID，无法打开完整目录',
   catalog_artist_missing: '歌曲详情未提供准确的艺人 ID，无法打开完整目录',

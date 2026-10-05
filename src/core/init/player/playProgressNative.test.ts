@@ -1,12 +1,12 @@
 import { beforeEach, afterEach, expect, it, vi } from 'vitest'
 import { StateEvent } from '@/event/stateEvent'
 import { AppEvent } from '@/event/appEvent'
-const native = vi.hoisted(() => ({ id: 'a-1' as string | null, duration: 200, getDuration: vi.fn(), getPosition: vi.fn() }))
+const native = vi.hoisted(() => ({ id: 'a-1' as string | null, duration: 200, getDuration: vi.fn(), getPosition: vi.fn(), seek: vi.fn() }))
 vi.mock('@/store/common/state', () => ({ default: { fontSize: 1, navActiveId: 'nav_search' } }))
 vi.mock('@/core/common', () => ({ setNavActiveId: vi.fn() }))
 vi.mock('@/utils', () => ({ arrPush: (a: unknown[], b: unknown[]) => a.push(...b), arrUnshift: (a: unknown[], b: unknown[]) => a.unshift(...b), formatPlayTime2: String }))
 vi.mock('@/core/list', () => ({ updateListMusics: vi.fn(async() => {}) }))
-vi.mock('@/plugins/player', () => ({ getDuration: native.getDuration, getPosition: native.getPosition, getNativeTrackId: async() => native.id, setCurrentTime: vi.fn() }))
+vi.mock('@/plugins/player', () => ({ getDuration: native.getDuration, getPosition: native.getPosition, getNativeTrackId: async() => native.id, setCurrentTime: native.seek }))
 vi.mock('@/utils/data', () => ({ savePlayInfo: vi.fn() }))
 vi.mock('@/utils/tools', () => ({ throttleBackgroundTimer: (fn: unknown) => fn }))
 vi.mock('react-native-background-timer', () => ({ default: { setInterval: () => 1, clearInterval: vi.fn() } }))
@@ -21,7 +21,7 @@ beforeEach(async() => {
   native.id = 'a-1'; native.duration = 200
   native.getDuration.mockImplementation(async() => native.duration)
   native.getPosition.mockResolvedValue(10)
-  hub = new AppEvent()
+  hub = new (await import('@/event/appEvent')).AppEvent()
   vi.stubGlobal('app_event', hub); vi.stubGlobal('state_event', new StateEvent())
   actions = (await import('@/store/player/action')).default
   state = (await import('@/store/player/state')).default
@@ -63,4 +63,26 @@ it('checks native identity again after an awaited duration read', async() => {
   native.id = 'a-2'
   finish(200); await vi.runAllTimersAsync()
   expect(state.progress.maxPlayTime).toBe(0)
+})
+
+it.each([false, true])('an old queued seek cannot change a newer selection (same object=%s)', async(repeat) => {
+  select('a', 'a-1')
+  const original = state.playMusicInfo.musicInfo
+  hub.setProgress(55, 100)
+  if (repeat) {
+    actions.setPlayMusicInfo('owned', original)
+    actions.setProgress(0, 0)
+  } else select('b', 'b-1')
+  await vi.runAllTimersAsync()
+  expect(state.progress.nowPlayTime).toBe(0)
+  expect(state.progress.maxPlayTime).toBe(0)
+  expect(native.seek).not.toHaveBeenCalled()
+})
+it('a current-owner seek still sets progress and native playback position', async() => {
+  select('a', 'a-1')
+  hub.setProgress(20, 200)
+  await vi.runAllTimersAsync()
+  expect(state.progress.nowPlayTime).toBe(20)
+  expect(state.progress.maxPlayTime).toBe(200)
+  expect(native.seek).toHaveBeenCalledWith(20)
 })

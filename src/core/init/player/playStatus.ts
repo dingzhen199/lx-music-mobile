@@ -28,13 +28,15 @@ export default () => {
   //   return true
   // }
 
-  const handlePlay = () => {
+  const handlePlay = (generation = playerState.playbackGeneration) => {
+    if (generation !== playerState.playbackGeneration) return
     // if (buttons.empty) buttons.empty = false
     if (buttons.play) return
     buttons.play = true
     setButtons()
   }
-  const handlePause = () => {
+  const handlePause = (generation = playerState.playbackGeneration) => {
+    if (generation !== playerState.playbackGeneration && playerState.playMusicInfo.musicInfo) return
     // if (buttons.empty) buttons.empty = false
     if (!buttons.play) return
     buttons.play = false

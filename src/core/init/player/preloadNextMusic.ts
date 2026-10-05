@@ -36,12 +36,14 @@ const preloadNextMusicUrl = async(curTime: number) => {
 }
 
 export default () => {
-  const setProgress = (time: number) => {
+  const setProgress = (time: number, _maxTime?: number, generation = playerState.playbackGeneration) => {
+    if (generation !== playerState.playbackGeneration) return
     if (!playerState.musicInfo.id) return
     preloadMusicInfo.preProgress = time
   }
 
-  const handleSetPlayInfo = () => {
+  const handleSetPlayInfo = (_reason?: unknown, generation = playerState.playbackGeneration) => {
+    if (generation !== playerState.playbackGeneration) return
     resetPreloadInfo()
   }
 
@@ -61,7 +63,7 @@ export default () => {
   }
 
   global.app_event.on('setProgress', setProgress)
-  global.app_event.on('musicToggled', handleSetPlayInfo)
+  global.app_event.onSync('musicToggled', handleSetPlayInfo)
   global.state_event.on('configUpdated', handleConfigUpdated)
   global.state_event.on('playProgressChanged', handlePlayProgressChanged)
 }

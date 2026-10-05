@@ -585,5 +585,14 @@
   "catalog_invalid_response": "提供方回傳的目錄格式無效",
   "catalog_load_error": "目錄載入失敗，請重試",
   "catalog_no_new_songs": "提供方未回傳新的目錄歌曲，請重試；已載入內容仍可使用",
-  "playback_batch_radio_paused": "僅播放本次所選，推薦暫不續補；結束後停止。一般播放或重新開台可恢復。"
+  "playback_batch_radio_paused": "僅播放本次所選，推薦暫不續補；結束後停止。一般播放或重新開台可恢復。",
+  "playback_play_next": "下一首播放",
+  "playback_move_up": "上移",
+  "playback_move_down": "下移",
+  "playback_remove": "移出佇列",
+  "playback_clear": "清空佇列",
+  "playback_clear_confirm": "清空待播歌曲和歌單續播？目前歌曲播放完後停止，不改變收藏歌單。",
+  "playback_action_failed": "操作失敗，請重試",
+  "catalog_song_actions": "歌曲操作",
+  "catalog_not_integrated": "應用尚未接入此來源的該類目錄，不能據此判斷平台不支援"
 }

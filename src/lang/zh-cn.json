@@ -585,5 +585,14 @@
   "catalog_invalid_response": "提供方返回的目录格式无效",
   "catalog_load_error": "目录加载失败，请重试",
   "catalog_no_new_songs": "提供方未返回新的目录歌曲，请重试；已加载内容仍可使用",
-  "playback_batch_radio_paused": "仅播放本次所选，推荐暂不续补；结束后停止。普通播放或重新开台可恢复。"
+  "playback_batch_radio_paused": "仅播放本次所选，推荐暂不续补；结束后停止。普通播放或重新开台可恢复。",
+  "playback_play_next": "下一首播放",
+  "playback_move_up": "上移",
+  "playback_move_down": "下移",
+  "playback_remove": "移出队列",
+  "playback_clear": "清空队列",
+  "playback_clear_confirm": "清空待播歌曲和歌单续播？当前歌曲播放完后停止，不改变收藏歌单。",
+  "playback_action_failed": "操作失败，请重试",
+  "catalog_song_actions": "歌曲操作",
+  "catalog_not_integrated": "应用尚未接入此来源的该类目录，不能据此判断平台不支持"
 }

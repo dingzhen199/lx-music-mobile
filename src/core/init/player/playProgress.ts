@@ -30,8 +30,9 @@ export default () => {
   const getCurrentTime = () => {
     const generation = playerState.playbackGeneration
     const resource = playerState.resourceTrackId
+    const operationId = playerState.resourceOperationId
     void readCurrentPlayback(getPosition, getNativeTrackId, generation).then(position => {
-      if (position == null || generation !== playerState.playbackGeneration || resource !== playerState.resourceTrackId) return
+      if (position == null || generation !== playerState.playbackGeneration || operationId !== playerState.resourceOperationId || resource !== playerState.resourceTrackId) return
       setNowPlayTime(position)
       if (!playerState.isPlay) return
 
@@ -43,10 +44,11 @@ export default () => {
   const getMaxTime = async() => {
     const generation = playerState.playbackGeneration
     const resource = playerState.resourceTrackId
+    const operationId = playerState.resourceOperationId
     const duration = await readCurrentPlayback(getDuration, getNativeTrackId, generation)
-    if (duration == null || generation !== playerState.playbackGeneration || resource !== playerState.resourceTrackId) return
+    if (duration == null || generation !== playerState.playbackGeneration || operationId !== playerState.resourceOperationId || resource !== playerState.resourceTrackId) return
     setMaxplayTime(duration)
-    if (duration > 0) global.app_event.playerLoadeddata()
+    if (duration > 0) global.app_event.playerLoadeddata(generation, () => operationId === playerState.resourceOperationId && resource === playerState.resourceTrackId)
 
     if (playerState.playMusicInfo.musicInfo && 'source' in playerState.playMusicInfo.musicInfo && !playerState.playMusicInfo.musicInfo.interval) {
       // console.log(formatPlayTime2(playProgress.maxPlayTime))
@@ -77,7 +79,8 @@ export default () => {
     getCurrentTime()
   }
 
-  const setProgress = (time: number, maxTime?: number) => {
+  const setProgress = (time: number, maxTime?: number, generation = playerState.playbackGeneration) => {
+    if (generation !== playerState.playbackGeneration) return
     if (!playerState.musicInfo.id) return
     // console.log('setProgress', time, maxTime)
     setNowPlayTime(time)
@@ -89,20 +92,23 @@ export default () => {
   }
 
 
-  const handlePlay = () => {
+  const handlePlay = (generation = playerState.playbackGeneration) => {
+    if (generation !== playerState.playbackGeneration) return
     void getMaxTime().catch(error => { console.warn('[player] duration unavailable', error) })
     // prevProgressStatus = 'normal'
     // handleSetTaskBarState(playProgress.progress, prevProgressStatus)
     startUpdateTimeout()
   }
-  const handlePause = () => {
+  const handlePause = (generation = playerState.playbackGeneration) => {
+    if (generation !== playerState.playbackGeneration) return
     // prevProgressStatus = 'paused'
     // handleSetTaskBarState(playProgress.progress, prevProgressStatus)
     // clearBufferTimeout()
     clearUpdateTimeout()
   }
 
-  const handleStop = () => {
+  const handleStop = (generation = playerState.playbackGeneration) => {
+    if (generation !== playerState.playbackGeneration) return
     clearUpdateTimeout()
     setNowPlayTime(0)
     setMaxplayTime(0)
@@ -110,7 +116,8 @@ export default () => {
     // handleSetTaskBarState(playProgress.progress, prevProgressStatus)
   }
 
-  const handleError = () => {
+  const handleError = (generation = playerState.playbackGeneration) => {
+    if (generation !== playerState.playbackGeneration) return
     // if (!restorePlayTime) restorePlayTime = getCurrentTime() // 记录出错的播放时间
     // console.log('handleError')
     // prevProgressStatus = 'error'
@@ -119,7 +126,8 @@ export default () => {
   }
 
 
-  const handleSetPlayInfo = () => {
+  const handleSetPlayInfo = (_reason?: unknown, generation = playerState.playbackGeneration) => {
+    if (generation !== playerState.playbackGeneration) return
     // restorePlayTime = playProgress.nowPlayTime
     // void setCurrentTime(playerState.progress.nowPlayTime)
     // setMaxplayTime(playProgress.maxPlayTime)

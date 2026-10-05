@@ -16,6 +16,7 @@ import { updateOptions, setVolume, setPlaybackRate, migratePlayerCache } from '.
 //   })
 // }
 
+let initialization: Promise<void> | null = null
 const initial = async({ volume, playRate, cacheSize, isHandleAudioFocus, isEnableAudioOffload }: {
   volume: number
   playRate: number
@@ -23,24 +24,29 @@ const initial = async({ volume, playRate, cacheSize, isHandleAudioFocus, isEnabl
   isHandleAudioFocus: boolean
   isEnableAudioOffload: boolean
 }) => {
-  if (global.lx.playerStatus.isIniting || global.lx.playerStatus.isInitialized) return
+  if (initialization) return initialization
+  if (global.lx.playerStatus.isInitialized) return
   global.lx.playerStatus.isIniting = true
-  console.log('Cache Size', cacheSize * 1024)
-  await migratePlayerCache()
-  await TrackPlayer.setupPlayer({
-    maxCacheSize: cacheSize * 1024,
-    maxBuffer: 1000,
-    waitForBuffer: true,
-    handleAudioFocus: isHandleAudioFocus,
-    audioOffload: isEnableAudioOffload,
-    autoUpdateMetadata: false,
+  initialization = (async() => {
+    console.log('Cache Size', cacheSize * 1024)
+    await migratePlayerCache()
+    await TrackPlayer.setupPlayer({
+      maxCacheSize: cacheSize * 1024,
+      maxBuffer: 1000,
+      waitForBuffer: true,
+      handleAudioFocus: isHandleAudioFocus,
+      audioOffload: isEnableAudioOffload,
+      autoUpdateMetadata: false,
+    })
+    await updateOptions()
+    await setVolume(volume)
+    await setPlaybackRate(playRate)
+    global.lx.playerStatus.isInitialized = true
+  })().finally(() => {
+    global.lx.playerStatus.isIniting = false
+    initialization = null
   })
-  global.lx.playerStatus.isInitialized = true
-  global.lx.playerStatus.isIniting = false
-  await updateOptions()
-  await setVolume(volume)
-  await setPlaybackRate(playRate)
-  // listenEvent()
+  return initialization
 }
 
 

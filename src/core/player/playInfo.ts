@@ -41,7 +41,7 @@ export const getPlayIndex = (listId: string | null, musicInfo: LX.Download.ListI
   playerPlayIndex: number
 } => {
   const { playInfo } = playerState
-  const playerList = getListMusicSync(playInfo.playerListId)
+  const playerList = getList(playInfo.playerListId)
 
   // if (listIndex < 0) throw new Error('music info not found')
   // playInfo.playIndex = listIndex
@@ -53,14 +53,17 @@ export const getPlayIndex = (listId: string | null, musicInfo: LX.Download.ListI
   }
 
   const list = getListMusicSync(listId)
-  if (list.length && musicInfo) {
+  if (musicInfo) {
     const currentId = musicInfo.id
     playIndex = list.findIndex(m => m.id == currentId)
-    if (!isTempPlay) {
+    // A session snapshot remains independent even after its saved list is emptied.
+    if (!isTempPlay && playerState.queueSession?.listId === listId) {
+      playerPlayIndex = playerList.findIndex(m => m.id === currentId)
+    } else if (list.length && !isTempPlay) {
       if (playIndex < 0) {
         playerPlayIndex = playerPlayIndex < 1 ? (list.length - 1) : (playerPlayIndex - 1)
       } else {
-        playerPlayIndex = playIndex
+        playerPlayIndex = playerList.findIndex(m => m.id === currentId)
       }
     }
   }
@@ -141,5 +144,6 @@ export const setPlayMusicInfo = (listId: string | null, musicInfo: LX.Download.L
 
 export const getList = (listId: string | null): LX.Music.MusicInfo[] | LX.Download.ListItem[] => {
   // return listId == LIST_ID_DOWNLOAD ? downloadList : getListMusicSync(listId)
+  if (listId && playerState.queueSession?.listId === listId) return playerState.queueSession.list as LX.Music.MusicInfo[] | LX.Download.ListItem[]
   return listId == LIST_IDS.DOWNLOAD ? [] : getListMusicSync(listId)
 }

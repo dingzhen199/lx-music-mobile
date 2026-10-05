@@ -1,7 +1,7 @@
 import playerState from '@/store/player/state'
 import TrackPlayer, { Capability, Event, RepeatMode, State } from 'react-native-track-player'
 import BackgroundTimer from 'react-native-background-timer'
-import { playMusic as handlePlayMusic } from './playList'
+import { playMusic as handlePlayMusic, invalidateResourceEnd } from './playList'
 import { existsFile, moveFile, privateStorageDirectoryPath, temporaryDirectoryPath } from '@/utils/fs'
 import { toast } from '@/utils/tools'
 // import { PlayerMusicInfo } from '@/store/modules/player/playInfo'
@@ -107,7 +107,7 @@ export const isTempId = (trackId = global.lx.playerTrackId) => !trackId || tempI
 //   },
 // }
 
-const playMusic = ((fn: (musicInfo: LX.Player.PlayMusic, url: string, time: number, generation: number) => void, delay = 800) => {
+const playMusic = ((fn: (musicInfo: LX.Player.PlayMusic, url: string, time: number, generation: number, operationId: number) => void, delay = 800) => {
   let delayTimer: number | null = null
   let isDelayRun = false
   let timer: number | null = null
@@ -115,11 +115,13 @@ const playMusic = ((fn: (musicInfo: LX.Player.PlayMusic, url: string, time: numb
   let _url = ''
   let _time = 0
   let _generation = 0
-  return (musicInfo: LX.Player.PlayMusic, url: string, time: number, generation: number) => {
+  let _operationId = 0
+  return (musicInfo: LX.Player.PlayMusic, url: string, time: number, generation: number, operationId: number) => {
     _musicInfo = musicInfo
     _url = url
     _time = time
     _generation = generation
+    _operationId = operationId
     if (timer) {
       BackgroundTimer.clearTimeout(timer)
       timer = null
@@ -135,29 +137,31 @@ const playMusic = ((fn: (musicInfo: LX.Player.PlayMusic, url: string, time: numb
         let url = _url
         let time = _time
         const generation = _generation
+        const operationId = _operationId
         _musicInfo = null
         _url = ''
         _time = 0
         isDelayRun = false
-        fn(musicInfo!, url, time, generation)
+        fn(musicInfo!, url, time, generation, operationId)
       }, delay)
     } else {
       isDelayRun = true
-      fn(musicInfo, url, time, generation)
+      fn(musicInfo, url, time, generation, operationId)
       delayTimer = BackgroundTimer.setTimeout(() => {
         delayTimer = null
         isDelayRun = false
       }, 500)
     }
   }
-})((musicInfo, url, time, generation) => {
-  handlePlayMusic(musicInfo, url, time, generation)
+})((musicInfo, url, time, generation, operationId) => {
+  handlePlayMusic(musicInfo, url, time, generation, operationId)
 })
 
 export const setResource = (musicInfo: LX.Player.PlayMusic, url: string, duration?: number) => {
+  const operationId = invalidateResourceEnd()
   playerState.resourceMusicId = musicInfo.id
   playerState.resourceTrackId = null
-  playMusic(musicInfo, url, duration ?? 0, playerState.playbackGeneration)
+  playMusic(musicInfo, url, duration ?? 0, playerState.playbackGeneration, operationId)
 }
 
 export const setPlay = async() => TrackPlayer.play()
@@ -170,7 +174,11 @@ export const getNativeTrackId = async(): Promise<string | null> => {
   return typeof track?.id === 'string' ? track.id : null
 }
 export const setStop = async() => {
+  const operationId = invalidateResourceEnd()
+  const generation = playerState.playbackGeneration
+  const resourceTrackId = playerState.resourceTrackId
   await TrackPlayer.stop()
+  if (operationId !== playerState.resourceOperationId || generation !== playerState.playbackGeneration || resourceTrackId !== playerState.resourceTrackId) return
   if (!isEmpty()) await TrackPlayer.skipToNext()
 }
 export const setLoop = async(loop: boolean) => TrackPlayer.setRepeatMode(loop ? RepeatMode.Off : RepeatMode.Track)

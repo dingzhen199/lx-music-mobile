@@ -7,6 +7,27 @@ import playerState from '@/store/player/state'
 
 
 const list: LX.Player.Track[] = []
+// Only an installed audio/placeholder pair can prove a natural end. Song IDs and
+// the currently selected generation alone do not identify the native resource.
+let installedResource: { generation: number, operationId: number, audioId: string, placeholderId: string } | null = null
+
+// The existing install action identity also owns cancellation. Stop invalidates
+// queued/in-flight installers, not just the evidence they may already publish.
+export const invalidateResourceEnd = () => {
+  installedResource = null
+  return ++playerState.resourceOperationId
+}
+export const getInstalledResource = () => {
+  const resource = installedResource
+  return resource &&
+    resource.generation === playerState.playbackGeneration &&
+    resource.operationId === playerState.resourceOperationId &&
+    resource.audioId === playerState.resourceTrackId ? resource : null
+}
+export const isCurrentResourceEnd = (trackId: string, generation: number) => {
+  const resource = getInstalledResource()
+  return resource !== null && resource.generation === generation && resource.placeholderId === trackId
+}
 
 const defaultUserAgent = 'Mozilla/5.0 (Linux; Android 10; Pixel 3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.79 Mobile Safari/537.36'
 const httpRxp = /^(https?:\/\/.+|\/.+)/
@@ -120,17 +141,22 @@ export const getCurrentTrack = async() => {
 }
 
 export const updateMetaData = async(musicInfo: LX.Player.MusicInfo, isPlay: boolean, force = false) => {
+  const generation = playerState.playbackGeneration
+  const current = () => generation === playerState.playbackGeneration
   if (!force && isPlay == state.isPlaying) {
     const duration = await TrackPlayer.getDuration()
+    if (!current()) return
     if (state.prevDuration != duration) {
       state.prevDuration = duration
       const trackInfo = await getCurrentTrack()
+      if (!current()) return
       if (trackInfo && musicInfo) {
         delayUpdateMusicInfo(musicInfo)
       }
     }
   } else {
     const [duration, trackInfo] = await Promise.all([TrackPlayer.getDuration(), getCurrentTrack()])
+    if (!current()) return
     state.prevDuration = duration
     if (trackInfo && musicInfo) {
       delayUpdateMusicInfo(musicInfo)
@@ -139,20 +165,27 @@ export const updateMetaData = async(musicInfo: LX.Player.MusicInfo, isPlay: bool
 }
 
 export const initTrackInfo = async(musicInfo: LX.Player.PlayMusic, mInfo: LX.Player.MusicInfo) => {
+  const generation = playerState.playbackGeneration
+  const operationId = playerState.resourceOperationId
+  const current = () => operationId === playerState.resourceOperationId && generation === playerState.playbackGeneration
   const tracks = buildTracks(musicInfo)
   await TrackPlayer.add(tracks).then(() => list.push(...tracks))
+  if (!current()) return
   const queue = await TrackPlayer.getQueue() as LX.Player.Track[]
+  if (!current()) return
   await TrackPlayer.skip(queue.findIndex(t => t.id == tracks[0].id))
+  if (!current()) return
   delayUpdateMusicInfo(mInfo)
 }
 
 
-const handlePlayMusic = async(musicInfo: LX.Player.PlayMusic, url: string, time: number, generation: number) => {
-  const current = () => generation === playerState.playbackGeneration && playerState.resourceMusicId === musicInfo.id
-  if (!current()) return
+const handlePlayMusic = async(musicInfo: LX.Player.PlayMusic, url: string, time: number, generation: number, operationId: number) => {
+  if (operationId !== playerState.resourceOperationId || generation !== playerState.playbackGeneration || playerState.resourceMusicId !== musicInfo.id) return
   const tracks = buildTracks(musicInfo, url)
   const track = tracks[0]
+  installedResource = null
   playerState.resourceTrackId = String(track.id)
+  const current = () => operationId === playerState.resourceOperationId && generation === playerState.playbackGeneration && playerState.resourceMusicId === musicInfo.id && playerState.resourceTrackId === track.id
   // await updateMusicInfo(track)
   const currentTrackIndex = await TrackPlayer.getCurrentTrack()
   if (!current()) return
@@ -162,6 +195,7 @@ const handlePlayMusic = async(musicInfo: LX.Player.PlayMusic, url: string, time:
   if (!current()) return
   await TrackPlayer.skip(queue.findIndex(t => t.id == track.id))
   if (!current()) return
+  installedResource = { generation, operationId, audioId: String(track.id), placeholderId: String(tracks[1].id) }
 
   if (currentTrackIndex == null) {
     if (!isTempTrack(track.id as string)) {
@@ -169,6 +203,7 @@ const handlePlayMusic = async(musicInfo: LX.Player.PlayMusic, url: string, time:
       if (!current()) return
       if (global.lx.restorePlayInfo) {
         await TrackPlayer.pause()
+        if (!current()) return
         // let startupAutoPlay = settingState.setting['player.startupAutoPlay']
         global.lx.restorePlayInfo = null
 
@@ -188,24 +223,29 @@ const handlePlayMusic = async(musicInfo: LX.Player.PlayMusic, url: string, time:
     }
   }
 
+  if (!current()) return
   if (queue.length > 2) {
-    void TrackPlayer.remove(Array(queue.length - 2).fill(null).map((_, i) => i)).then(() => list.splice(0, list.length - 2))
+    const count = queue.length - 2
+    await TrackPlayer.remove(Array(count).fill(null).map((_, i) => i))
+    // Reflect the exact native prefix removed before the serialized next install starts.
+    list.splice(0, count)
   }
 }
 let playPromise = Promise.resolve()
-let actionId = Math.random()
-export const playMusic = (musicInfo: LX.Player.PlayMusic, url: string, time: number, generation: number) => {
-  const id = actionId = Math.random()
+export const playMusic = (musicInfo: LX.Player.PlayMusic, url: string, time: number, generation: number, operationId?: number) => {
+  if (generation !== playerState.playbackGeneration) return
+  const requestId = operationId ?? invalidateResourceEnd()
   void playPromise.finally(() => {
-    if (id != actionId || generation !== playerState.playbackGeneration) return
-    playPromise = handlePlayMusic(musicInfo, url, time, generation)
+    if (requestId !== playerState.resourceOperationId || generation !== playerState.playbackGeneration) return
+    playPromise = handlePlayMusic(musicInfo, url, time, generation, requestId)
   })
 }
 
 // let musicId = null
 // let duration = 0
 let prevArtwork: string | undefined
-const updateMetaInfo = async(mInfo: LX.Player.MusicInfo) => {
+const updateMetaInfo = async(mInfo: LX.Player.MusicInfo, generation: number) => {
+  if (generation !== playerState.playbackGeneration) return
   const isShowNotificationImage = settingState.setting['player.isShowNotificationImage']
   // const mInfo = formatMusicInfo(musicInfo)
   // console.log('+++++updateMusicPic+++++', track.artwork, track.duration)
@@ -219,7 +259,9 @@ const updateMetaInfo = async(mInfo: LX.Player.MusicInfo) => {
   //   duration = global.playInfo.duration || 0
   // }
   // console.log('+++++updateMetaInfo+++++', mInfo.name)
-  state.isPlaying = await TrackPlayer.getState() == State.Playing
+  const isPlaying = await TrackPlayer.getState() == State.Playing
+  if (generation !== playerState.playbackGeneration) return
+  state.isPlaying = isPlaying
   let artwork = isShowNotificationImage ? mInfo.pic ?? prevArtwork : undefined
   if (mInfo.pic) prevArtwork = mInfo.pic
   let title: string
@@ -246,12 +288,13 @@ const updateMetaInfo = async(mInfo: LX.Player.MusicInfo) => {
 const debounceUpdateMetaInfoTools = {
   updateMetaPromise: Promise.resolve(),
   musicInfo: null as LX.Player.MusicInfo | null,
-  debounce(fn: (musicInfo: LX.Player.MusicInfo) => void | Promise<void>) {
+  debounce(fn: (musicInfo: LX.Player.MusicInfo, generation: number) => void | Promise<void>) {
     // let delayTimer = null
     let isDelayRun = false
     let timer: number | null = null
     let _musicInfo: LX.Player.MusicInfo | null = null
     return (musicInfo: LX.Player.MusicInfo) => {
+      const generation = playerState.playbackGeneration
       // console.log('debounceUpdateMetaInfoTools', musicInfo)
       if (timer) {
         BackgroundTimer.clearTimeout(timer)
@@ -269,11 +312,11 @@ const debounceUpdateMetaInfoTools = {
           _musicInfo = null
           if (!musicInfo) return
           // isDelayRun = false
-          void fn(musicInfo)
+          void fn(musicInfo, generation)
         }, 500)
       } else {
         isDelayRun = true
-        void fn(musicInfo)
+        void fn(musicInfo, generation)
         BackgroundTimer.setTimeout(() => {
           // delayTimer = null
           isDelayRun = false
@@ -282,12 +325,12 @@ const debounceUpdateMetaInfoTools = {
     }
   },
   init() {
-    return this.debounce(async(musicInfo: LX.Player.MusicInfo) => {
+    return this.debounce(async(musicInfo: LX.Player.MusicInfo, generation: number) => {
       this.musicInfo = musicInfo
       return this.updateMetaPromise.then(() => {
         // console.log('run')
-        if (this.musicInfo?.id === musicInfo.id) {
-          this.updateMetaPromise = updateMetaInfo(musicInfo)
+        if (generation === playerState.playbackGeneration && this.musicInfo?.id === musicInfo.id) {
+          this.updateMetaPromise = updateMetaInfo(musicInfo, generation)
         }
       })
     })

@@ -36,7 +36,13 @@ export default class Event {
   }
 
   emit(eventName: string, ...args: any[]) {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+    this.emitGuarded(eventName, () => true, ...args)
+  }
+
+  protected emitGuarded(eventName: string, isCurrent: () => boolean, ...args: any[]) {
     for (const listener of [...(this.synchronous.get(eventName) ?? [])]) {
+      if (!isCurrent()) return
       // eslint-disable-next-line @typescript-eslint/no-unsafe-argument -- Generic event transport; typed event hubs validate each listener signature.
       try { listener(...args) } catch (error) { console.warn('[event] synchronous observer failed', eventName, error) }
     }
@@ -44,6 +50,7 @@ export default class Event {
       let targetListeners = this.listeners.get(eventName)
       if (!targetListeners) return
       for (const listener of targetListeners) {
+        if (!isCurrent()) return
         // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
         listener(...args)
       }

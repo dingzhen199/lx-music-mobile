@@ -3,7 +3,7 @@ import { toNewMusicInfo } from '@/utils'
 import { type CatalogKind, type CatalogPage, type CatalogProviders, type CatalogTarget } from './types'
 
 export class CatalogError extends Error {
-  constructor(public readonly code: 'unsupported' | 'metadata' | 'response', message: string) {
+  constructor(public readonly code: 'unsupported' | 'not-integrated' | 'metadata' | 'response', message: string) {
     super(message)
   }
 }
@@ -12,9 +12,10 @@ const validId = (id: unknown): id is string | number =>
 
 export const createCatalogAdapter = (providers: CatalogProviders) => ({
   async resolve(kind: CatalogKind, music: LX.Music.MusicInfo): Promise<CatalogTarget[]> {
-    if (music.source === 'local' || !providers[music.source]?.[kind]) {
+    if (music.source === 'local') {
       throw new CatalogError('unsupported', catalogText('catalog_unsupported'))
     }
+    if (!providers[music.source]?.[kind]) throw new CatalogError('not-integrated', catalogText('catalog_not_integrated'))
     const provider = providers[music.source]!
     let metadata = music.meta
     const needsDetail = kind === 'artist'
@@ -41,7 +42,7 @@ export const createCatalogAdapter = (providers: CatalogProviders) => ({
   async load(target: CatalogTarget, page = 1, limit = 50): Promise<CatalogPage> {
     const provider = providers[target.source]
     const fetchPage = provider?.[target.kind]
-    if (!fetchPage) throw new CatalogError('unsupported', catalogText('catalog_unsupported'))
+    if (!fetchPage) throw new CatalogError('not-integrated', catalogText('catalog_not_integrated'))
     if (!validId(target.id) || !Number.isInteger(page) || page < 1 || !Number.isInteger(limit) || limit < 1) {
       throw new CatalogError('metadata', catalogText('catalog_invalid_parameters'))
     }

@@ -12,7 +12,7 @@ export default () => {
     if (isSkip) return
 
     const { playIndex } = updatePlayIndex()
-    if (playIndex < 0) { // 歌曲被移除
+    if (playIndex < 0 && !playerState.queueSession) { // 歌曲被移除
       // if (global.lx.isPlayedStop) {
       //   stop()
       //   setTimeout(() => {

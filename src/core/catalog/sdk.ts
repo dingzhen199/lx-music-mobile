@@ -1,3 +1,5 @@
+import txAlbum from '@/utils/musicSdk/tx/album'
+import wyAlbum from '@/utils/musicSdk/wy/album'
 import kgSinger from '@/utils/musicSdk/kg/singer'
 import txSinger from '@/utils/musicSdk/tx/singer'
 import wySinger from '@/utils/musicSdk/wy/singer'
@@ -11,10 +13,12 @@ import { createCatalogAdapter } from './adapter'
 
 export const catalogAdapter = createCatalogAdapter({
   tx: {
+    album: async(id, page, limit) => txAlbum.getAlbumDetail(id, page, limit),
     artist: async(id, page, limit) => txSinger.getSongList(id, page, limit),
     detail: async(music) => getTxMusicInfo(music.meta.songId),
   },
   wy: {
+    album: async(id, page, limit) => wyAlbum.getAlbumDetail(id, page, limit),
     artist: async(id, page, limit) => wySinger.getSongList(id, page, limit),
     detail: async(music) => {
       // The legacy JS request gains promise dynamically, which its inferred type omits.

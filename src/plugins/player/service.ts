@@ -2,11 +2,43 @@
 import TrackPlayer, { State as TPState, Event as TPEvent } from 'react-native-track-player'
 // import { store } from '@/store'
 // import { action as playerAction, STATUS } from '@/store/modules/player'
-import { isTempId, isEmpty } from './utils'
+import { isTempId } from './utils'
 // import { play as lrcPlay, pause as lrcPause } from '@/core/lyric'
 import { exitApp } from '@/core/common'
-import { getCurrentTrackId } from './playList'
+import { getCurrentTrackId, isCurrentResourceEnd, getInstalledResource } from './playList'
 import { pause, play, playNext, playPrev } from '@/core/player/player'
+import playerState from '@/store/player/state'
+
+type PlaybackEvent = 'play' | 'pause' | 'error' | 'playerPlaying' | 'playerPause' | 'playerEnded' | 'playerError' | 'playerLoadstart' | 'playerEmptied' | 'playerWaiting'
+const capturePlaybackOwner = () => {
+  const generation = playerState.playbackGeneration
+  const musicInfo = playerState.playMusicInfo.musicInfo
+  const resourceTrackId = playerState.resourceTrackId
+  const resource = getInstalledResource()
+  const operationId = playerState.resourceOperationId
+  const isCurrent = () => operationId === playerState.resourceOperationId && generation === playerState.playbackGeneration && musicInfo === playerState.playMusicInfo.musicInfo && resourceTrackId === playerState.resourceTrackId
+  return {
+    generation,
+    resource,
+    isCurrent,
+    emit(event: PlaybackEvent) {
+      if (isCurrent()) global.app_event[event](generation, () => isCurrent() && resource !== null && getInstalledResource() === resource)
+    },
+  }
+}
+
+const readInstalledOwner = async() => {
+  const owner = capturePlaybackOwner()
+  if (!owner.resource) return null
+  try {
+    const trackId = await getCurrentTrackId()
+    if (!owner.isCurrent() || getInstalledResource() !== owner.resource || trackId !== owner.resource.audioId) return null
+    return owner
+  } catch (error) {
+    if (owner.isCurrent()) console.warn('Native resource identity unavailable', error)
+    return null
+  }
+}
 
 let isInitialized = false
 
@@ -67,17 +99,21 @@ const registerPlaybackService = async() => {
   // })
 
   TrackPlayer.addEventListener(TPEvent.PlaybackError, async(err: any) => {
+    const owner = await readInstalledOwner()
+    if (!owner) return
     console.log('playback-error', err)
-    global.app_event.error()
-    global.app_event.playerError()
+    owner.emit('error')
+    owner.emit('playerError')
   })
 
   TrackPlayer.addEventListener(TPEvent.RemoteSeek, async({ position }) => {
-    global.app_event.setProgress(position as number)
+    const owner = capturePlaybackOwner()
+    if (owner.isCurrent()) global.app_event.setProgress(position as number, undefined, owner.generation)
   })
 
   TrackPlayer.addEventListener(TPEvent.PlaybackState, async info => {
-    if (global.lx.gettingUrlId || isTempId()) return
+    const owner = await readInstalledOwner()
+    if (!owner || global.lx.gettingUrlId || isTempId()) return
     // let currentIsPlaying = false
 
     switch (info.state) {
@@ -87,92 +123,61 @@ const registerPlaybackService = async() => {
       case TPState.Ready:
       case TPState.Stopped:
       case TPState.Paused:
-        global.app_event.playerPause()
-        global.app_event.pause()
+        owner.emit('playerPause')
+        owner.emit('pause')
         break
       case TPState.Playing:
-        global.app_event.playerPlaying()
-        global.app_event.play()
+        owner.emit('playerPlaying')
+        owner.emit('play')
         break
       case TPState.Buffering:
-        global.app_event.pause()
-        global.app_event.playerWaiting()
+        owner.emit('pause')
+        owner.emit('playerWaiting')
         break
       case TPState.Connecting:
-        global.app_event.playerLoadstart()
+        owner.emit('playerLoadstart')
         break
       default:
         // console.log('playback-state', info)
         break
     }
-    if (global.lx.isPlayedStop) return handleExitApp('Timeout Exit')
+    if (owner.isCurrent() && global.lx.isPlayedStop) return handleExitApp('Timeout Exit')
 
     // console.log('currentIsPlaying', currentIsPlaying, global.lx.playInfo.isPlaying)
     // void updateMetaData(global.lx.store_playMusicInfo.musicInfo, currentIsPlaying)
   })
   TrackPlayer.addEventListener(TPEvent.PlaybackTrackChanged, async info => {
-    // console.log('PlaybackTrackChanged====>', info)
-    global.lx.playerTrackId = await getCurrentTrackId()
-    if (info.track == null) return
-    if (global.lx.isPlayedStop) return handleExitApp('Timeout Exit')
-
-    // console.log('global.lx.playerTrackId====>', global.lx.playerTrackId)
-    if (isEmpty()) {
-      // console.log('====TEMP PAUSE====')
-      await TrackPlayer.pause()
-      global.app_event.playerPause()
-      global.app_event.pause()
-      global.app_event.playerEnded()
-      global.app_event.playerEmptied()
-      // if (retryTrack) {
-      //   if (retryTrack.musicId == retryGetUrlId) {
-      //     if (++retryGetUrlNum > 1) {
-      //       store.dispatch(playerAction.playNext(true))
-      //       retryGetUrlId = null
-      //       retryTrack = null
-      //       return
-      //     }
-      //   } else {
-      //     retryGetUrlId = retryTrack.musicId
-      //     retryGetUrlNum = 0
-      //   }
-      //   store.dispatch(playerAction.refreshMusicUrl(global.lx.playInfo.currentPlayMusicInfo, errorTime))
-      // } else {
-      //   store.dispatch(playerAction.playNext(true))
-      // }
+    const owner = capturePlaybackOwner()
+    let trackId: Awaited<ReturnType<typeof getCurrentTrackId>>
+    try {
+      trackId = await getCurrentTrackId()
+    } catch (error) {
+      if (owner.isCurrent()) console.warn('Native track identity unavailable', error)
+      return
     }
-  //   // if (!info.nextTrack) return
-  //   // if (info.track) {
-  //   //   const track = info.track.substring(0, info.track.lastIndexOf('__//'))
-  //   //   const nextTrack = info.track.substring(0, info.nextTrack.lastIndexOf('__//'))
-  //   //   console.log(nextTrack, track)
-  //   //   if (nextTrack == track) return
-  //   // }
-  //   // const track = await TrackPlayer.getTrack(info.nextTrack)
-  //   // if (!track) return
-  //   // let newTrack
-  //   // if (track.url == defaultUrl) {
-  //   //   TrackPlayer.pause().then(async() => {
-  //   //     isRefreshUrl = true
-  //   //     retryGetUrlId = track.id
-  //   //     retryGetUrlNum = 0
-  //   //     try {
-  //   //       newTrack = await updateTrackUrl(track)
-  //   //       console.log('++++newTrack++++', newTrack)
-  //   //     } catch (error) {
-  //   //       console.log('error', error)
-  //   //       if (error.message != '跳过播放') TrackPlayer.skipToNext()
-  //   //       isRefreshUrl = false
-  //   //       retryGetUrlId = null
-  //   //       return
-  //   //     }
-  //   //     retryGetUrlId = null
-  //   //     isRefreshUrl = false
-  //   //     console.log(await TrackPlayer.getQueue(), null, 2)
-  //   //     await TrackPlayer.play()
-  //   //   })
-  //   // }
-  //   // store.dispatch(playerAction.playNext())
+    // Missing identity is not proof of a natural end. Do not map numeric event indices to songs.
+    if (!owner.isCurrent() || typeof trackId !== 'string' || !trackId) return
+    global.lx.playerTrackId = trackId
+    if (info.track == null) return
+    const isResourceEnd = isCurrentResourceEnd(trackId, owner.generation)
+    if (global.lx.isPlayedStop && (isResourceEnd || trackId === playerState.resourceTrackId)) return handleExitApp('Timeout Exit')
+
+    if (isResourceEnd) {
+      try {
+        await TrackPlayer.pause()
+      } catch (error) {
+        if (owner.isCurrent()) console.warn('Native end pause failed', error)
+        return
+      }
+      if (!owner.isCurrent() || !isCurrentResourceEnd(trackId, owner.generation)) return
+      const emitEnd = (event: PlaybackEvent) => {
+        if (isCurrentResourceEnd(trackId, owner.generation)) owner.emit(event)
+      }
+      emitEnd('playerPause')
+      emitEnd('pause')
+      emitEnd('playerEnded')
+      emitEnd('playerEmptied')
+    }
   })
   // TrackPlayer.addEventListener('playback-queue-ended', async info => {
   //   // console.log('playback-queue-ended', info)
